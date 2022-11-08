@@ -9,7 +9,6 @@
 * Contains data/operations used in lex.cpp file by class lexer.
 */
 
-
 #ifndef LEX_HPP
 #define LEX_HPP
 
@@ -22,6 +21,7 @@
 #include "token.hpp"
 
 namespace xlang {
+
 	class lexer {
 	public:
 		lexer(std::string);

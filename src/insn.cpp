@@ -7,56 +7,54 @@
 
 #include "insn.hpp"
 
-using namespace xlang;
+namespace xlang {
 
-operand *xlang::insn_class::get_operand_mem() {
-	return new struct operand;
+	operand *insn_class::get_operand_mem() {
+		return new struct operand;
+	}
+
+	text *insn_class::get_text_mem() {
+		return new struct text;
+	}
+
+	insn *insn_class::get_insn_mem() {
+		insn *innew = new insn();
+		innew->operand_1 = get_operand_mem();
+		innew->operand_2 = get_operand_mem();
+		return innew;
+	}
+
+	data *insn_class::get_data_mem() {
+		data *d = new data();
+		d->is_array = false;
+		return d;
+	}
+
+	resv *insn_class::get_resv_mem() {
+		resv *r = new resv;
+		r->is_record = false;
+		return r;
+	}
+
+	void insn_class::delete_operand(operand **opr) {
+		delete *opr;
+		*opr = nullptr;
+	}
+
+	void insn_class::delete_insn(insn **in) {
+		delete *in;
+		*in = nullptr;
+	}
+
+	void insn_class::delete_data(data **d) {
+		delete *d;
+	}
+
+	void insn_class::delete_resv(resv **r) {
+		delete *r;
+	}
+
+	void insn_class::delete_text(text **t) {
+		delete *t;
+	}
 }
-
-text *xlang::insn_class::get_text_mem() {
-	return new struct text;
-}
-
-insn *xlang::insn_class::get_insn_mem() {
-	insn *innew = new insn();
-	innew->operand_1 = get_operand_mem();
-	innew->operand_2 = get_operand_mem();
-	return innew;
-}
-
-data *xlang::insn_class::get_data_mem() {
-	data *d = new data();
-	d->is_array = false;
-	return d;
-}
-
-resv *xlang::insn_class::get_resv_mem() {
-	resv *r = new resv;
-	r->is_record = false;
-	return r;
-}
-
-void xlang::insn_class::delete_operand(operand **opr) {
-	delete *opr;
-	*opr = nullptr;
-}
-
-void xlang::insn_class::delete_insn(insn **in) {
-	delete *in;
-	*in = nullptr;
-}
-
-void xlang::insn_class::delete_data(data **d) {
-	delete *d;
-}
-
-void xlang::insn_class::delete_resv(resv **r) {
-	delete *r;
-}
-
-void xlang::insn_class::delete_text(text **t) {
-	delete *t;
-}
-
-
-

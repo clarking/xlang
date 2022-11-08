@@ -25,9 +25,8 @@ namespace xlang {
 		if (func_info->param_list.size() > 0) {
 			for (auto syminf: func_info->param_list) {
 				if (syminf->symbol_info != nullptr) {
-					if (syminf->symbol_info->symbol == tok.string) {
+					if (syminf->symbol_info->symbol == tok.string)
 						return syminf->symbol_info;
-					}
 				}
 			}
 		}
@@ -97,7 +96,7 @@ namespace xlang {
 			if (opr->tok.number == ARTHM_ADD || opr->tok.number == ARTHM_SUB) {
 				if (fact_2->tok.number == LIT_FLOAT || fact_2->tok.number == LIT_STRING) {
 					log_error_at(filename, opr->tok.loc, "invalid operand to binary " + opr->tok.string
-					                                            + " (have " + fact_2->tok.string + ")");
+					                                     + " (have " + fact_2->tok.string + ")");
 					return false;
 				}
 			}
@@ -144,7 +143,6 @@ namespace xlang {
 				}
 			}
 		}
-
 		return true;
 	}
 

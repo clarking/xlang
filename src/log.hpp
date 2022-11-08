@@ -20,7 +20,6 @@ namespace xlang {
 	#define    LOG_VERBOSE  2
 	#define    LOG_ANNOYING 3
 
-
 	template<typename ...Args>
 	void log_error(Args &&...args) {
 		(std::cout << ... << args);
