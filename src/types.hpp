@@ -1,8 +1,11 @@
 /*
-*  src/types.hpp
-*
-*  Copyright (C) 2019  Pritam Zope
-*/
+ * Copyright (c) 2019  Pritam Zope
+ * Copyright (c) 2021, Aaron Clark Diaz.
+ *
+ * SPDX-License-Identifier: GPL-2.0-only
+ */
+
+
 /*
 * Contains structures/types of general types
 */
@@ -20,9 +23,9 @@ typedef std::string record_t;
 typedef std::string identifier_t;
 
 //location of token
-typedef struct{
-  int line;
-  int col;
-}loc_t;
+typedef struct {
+	int line;
+	int col;
+} loc_t;
 
 #endif

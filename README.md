@@ -41,33 +41,21 @@ Or see the manual,
 
 # Installation and Uninstallation
 
-#### Dependency
+#### Dependencies
 
   GCC with C++11 compiler(g++)<br/>
   Netwide Assembler(NASM)
+  CMake
 
-### Step 1: Getting the Source Code
+### Building
 
-You can download xlang by command:
+You can build xlang using the following command sequence:
 
-    $ git clone https://github.com/pritamzope/xlang.git
+    $ git clone https://github.com/clarking/xlang.git
     $ cd xlang
-
-or you can get xlang via other ways you prefer at <https://github.com/pritamzope/xlang>
-
-### Step 2: Compile and Install
-
-Installing xlang requires root(super user)'s privilege. Run command:
-
-    $ make
-    $ sudo make install
-
-## Uninstall
-
-To uninstall the xlang, just run command:
-
-    $ cd xlang
-    $ sudo make remove
+    $ mkdir build && cd build
+    $ cmake ..
+    $ cmake --build .
 
 # How to Start
 
