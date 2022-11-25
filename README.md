@@ -34,29 +34,29 @@ At present, xlang has a set of **core features** as below:
 
 # Documentation
 
-See **doc** directory for documentation.
-Or see the manual,
+See **doc** directory for documentation, or see the manual with:
 
+```bash
     $ man xlang
-
+```
 # Installation and Uninstallation
 
 #### Dependencies
 
-  GCC with C++11 compiler(g++)<br/>
-  Netwide Assembler(NASM)
-  CMake
+ - GCC with C++11 compiler(g++)<br/>
+ - Netwide Assembler(NASM)
+ - CMake
 
 ### Building
 
 You can build xlang using the following command sequence:
-
+```bash
     $ git clone https://github.com/clarking/xlang.git
     $ cd xlang
     $ mkdir build && cd build
     $ cmake ..
     $ cmake --build .
-
+```
 # How to Start
 
 Create a file with .x file extension. Write a xlang program(see **doc** or **examples**).
@@ -65,7 +65,7 @@ Compile the program and Run it.
 ## Example
 Here's a simple addition program that imports C printf() function.
 Create a file named "hello_world.x" which reads as follow:
-
+```c
     extern void printf(char*, int);
 
     global void main()
@@ -78,6 +78,7 @@ Create a file named "hello_world.x" which reads as follow:
 
         printf("sum: %d\n", sum);
     }
+ ```
 
 Then run xlang in the terminal
 
@@ -94,6 +95,7 @@ Then run xlang in the terminal with **-S** option.
 
 It will create a new file "hello_world.asm" which reads as follows:
 
+```nasm
     section .text
         extern printf
         global main
@@ -134,7 +136,4 @@ It will create a new file "hello_world.asm" which reads as follows:
     
     section .data
         string_val1 db 0x73,0x75,0x6D,0x3A,0x20,0x25,0x64,0x0A,0x00    ; 'sum: %d\n'
-
---------------------------------------------------------------------------------
-
-
+```
