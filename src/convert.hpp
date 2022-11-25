@@ -5,21 +5,19 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-#ifndef CONVERT_HPP
-#define CONVERT_HPP
+
+#pragma once
 
 #include "token.hpp"
+#include <string>
 
 namespace xlang {
-
+	
 	extern int get_decimal(token);
 	extern int convert_octal_to_decimal(std::string);
 	extern int convert_hex_to_decimal(std::string);
 	extern int convert_bin_to_decimal(std::string);
 	extern int convert_char_to_decimal(std::string);
 	extern std::string decimal_to_hex(unsigned int);
-
+	
 }
-
-#endif
-

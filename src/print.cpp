@@ -7,121 +7,132 @@
 
 
 #include "tree.hpp"
+#include "log.hpp"
 
 namespace xlang {
-
+	
+	
+	void st_node::print() {
+		// TODO:: not implemented yet
+	}
+	
+	void st_record_symtab::print() {
+		// TODO:: not implemented yet
+	}
+	
 	void labled_stmt::print() {
-		std::cout << "------------ labled statement -----------------" << std::endl;
-		std::cout << "ptr : " << this << std::endl;
-		std::cout << "label : " << label.string << std::endl;
-		std::cout << "-----------------------------------------------" << std::endl;
+		
+		log::line("------------ labled statement -----------------");
+		log::line("ptr : ", this);
+		log::line("label : ", label.string);
+		log::line("-----------------------------------------------");
 	}
-
-	void id_expr::print() {
-		std::cout << "{\n";
-		std::cout << "  string : " << tok.string << std::endl;
-		std::cout << "  is_oprtr : " << (is_oprtr ? "true" : "false") << std::endl;
-		std::cout << "  is_id : " << (is_id ? "true" : "false") << std::endl;
-		std::cout << "  id_info : " << id_info << std::endl;
-		std::cout << "  is_subscript : " << (is_subscript ? "true" : "false");
-
+	
+	void id_expr_t::print() {
+		log::line("{\n");
+		log::line("  string : ", tok.string);
+		log::line("  is_oprtr : ", (is_oprtr ? "true" : "false"));
+		log::line("  is_id : ", (is_id ? "true" : "false"));
+		log::line("  id_info : ", id_info);
+		log::line("  is_subscript : ", (is_subscript ? "true" : "false"));
+		
 		for (const auto &it: subscript) {
-			std::cout << " [" << it.string << "]";
+			log::line(" [", it.string, "]");
 		}
-
-		std::cout << std::endl;
-		std::cout << "  is_ptr : " << (is_ptr ? "true" : "false") << std::endl;
-		std::cout << "  ptr_oprtr_count : " << ptr_oprtr_count << std::endl;
-		std::cout << "  this : " << this << std::endl;
-		std::cout << "  left : " << left << std::endl;
-		std::cout << "  right : " << right << std::endl;
-		std::cout << "  unary : " << unary << std::endl;
-		std::cout << "}\n";
-//
-//		left->print();
-//		right->print();
-//		unary->print();
+		
+		log::line("");
+		log::line("  is_ptr : ", (is_ptr ? "true" : "false"));
+		log::line("  ptr_oprtr_count : ", ptr_oprtr_count);
+		log::line("  this : ", this);
+		log::line("  left : ", left);
+		log::line("  right : ", right);
+		log::line("  unary : ", unary);
+		log::line("}");
+		//
+		//		left->print();
+		//		right->print();
+		//		unary->print();
 	}
-
-	void sizeof_expr::print() {
+	
+	void sizeof_expr_t::print() {
 		//size_t i;
-		std::cout << "(sizeof expression : " << this << ")" << std::endl;
-		std::cout << "  is_simple_type : " << (is_simple_type) << std::endl;
-		std::cout << "  simple_type : ";
+		log::line("(sizeof expression : ", this, ")");
+		log::line("  is_simple_type : ", (is_simple_type));
+		log::line("  simple_type : ");
 		for (const auto &st: simple_type) {
-			std::cout << st.string << " ";
+			log::line(st.string, " ");
 		}
-		std::cout << std::endl;
-		std::cout << "  identifier : " << identifier.string << std::endl;
-		std::cout << "  is_ptr : " << is_ptr << std::endl;
-		std::cout << "  ptr_oprtr_count : " << ptr_oprtr_count << std::endl;
+		log::line("");
+		log::line("  identifier : ", identifier.string);
+		log::line("  is_ptr : ", is_ptr);
+		log::line("  ptr_oprtr_count : ", ptr_oprtr_count);
 	}
-
-	void cast_expr::print() {
+	
+	void cast_expr_t::print() {
 		//size_t i;
-		std::cout << "(cast expression : " << this << ")" << std::endl;
-		std::cout << "  is_simple_type : " << (is_simple_type ? "true" : "false") << std::endl;
-		std::cout << "  simple_type : ";
+		log::line("(cast expression : ", this, ")");
+		log::line("  is_simple_type : ", (is_simple_type ? "true" : "false"));
+		log::line("  simple_type : ");
 		for (const auto &st: simple_type)
-			std::cout << st.string << " ";
-		std::cout << std::endl;
-		std::cout << "  identifier = " << identifier.string << std::endl;
-		std::cout << "  ptr_oprtr_count = " << ptr_oprtr_count << std::endl;
-		std::cout << "  target : " << std::endl;
+			log::line(st.string, " ");
+		log::line("");
+		log::line("  identifier = ", identifier.string);
+		log::line("  ptr_oprtr_count = ", ptr_oprtr_count);
+		log::line("  target : ");
 		target->print();
 	}
-
-	void assgn_expr::print() {
-		std::cout << "(assgn expression : " << this << ")" << std::endl;
-		std::cout << "{\n";
-		std::cout << "  tok : " << tok.string << std::endl;
-		std::cout << "  id_expression : " << id_expression << std::endl;
-		std::cout << "  expression : " << expression << std::endl;
-		std::cout << "}\n";
-		if (id_expression == nullptr)
+	
+	void assgn_expr_t::print() {
+		log::line("(assgn expression : ", this, ")");
+		log::line("{\n");
+		log::line("  tok : ", tok.string);
+		log::line("  id_expr : ", id_expr);
+		log::line("  expression : ", expression);
+		log::line("}\n");
+		if (id_expr == nullptr)
 			return;
 		if (expression == nullptr)
 			return;
-		id_expression->print();
+		id_expr->print();
 		expression->print();
 	}
-
+	
 	void expr_stmt::print() {
-		std::cout << "------------ expression statement -----------------" << std::endl;
-		std::cout << "ptr : " << this << std::endl;
-		std::cout << "expression : " << expression << std::endl;
+		log::line("------------ expression statement -----------------");
+		log::line("ptr : ", this);
+		log::line("expression : ", expression);
 		expression->print();
-		std::cout << "---------------------------------------------------" << std::endl;
+		log::line("---------------------------------------------------");
 	}
-
-	void primary_expr::print() {
-		std::cout << "{\n";
-		std::cout << "  string : " << tok.string << std::endl;
-		std::cout << "  token : " << tok.number << std::endl;
-		std::cout << "  is_oprtr : " << (is_oprtr ? "true" : "false") << std::endl;
-		std::cout << "  oprtr_kind : " << oprtr_kind << std::endl;
-		std::cout << "  is_id : " << (is_id) << std::endl;
-		std::cout << "  this : " << this << std::endl;
-		std::cout << "  left : " << left << std::endl;
-		std::cout << "  right : " << right << std::endl;
-		std::cout << "  unary_node : " << unary_node << std::endl;
-		std::cout << "}\n";
+	
+	void primary_expr_t::print() {
+		log::line("{");
+		log::line("  string : ", tok.string);
+		log::line("  token : ", tok.number);
+		log::line("  is_oprtr : ", (is_oprtr ? "true" : "false"));
+		log::line("  oprtr_kind : ", oprtr_kind);
+		log::line("  is_id : ", (is_id));
+		log::line("  this : ", this);
+		log::line("  left : ", left);
+		log::line("  right : ", right);
+		log::line("  unary_node : ", unary_node);
+		log::line("}");
 	}
-
+	
 	void stmt::print() {
 		stmt *curr = this;
 		while (curr != nullptr) {
-			std::cout << "||||||||||||||||||||||| statement ||||||||||||||||||||" << std::endl;
-			std::cout << "ptr : " << curr << std::endl;
-			std::cout << "type : " << curr->type << std::endl;
-			std::cout << "labled_statement : " << curr->labled_statement << std::endl;
-			std::cout << "expression_statement : " << curr->expression_statement << std::endl;
-			std::cout << "selection_statement : " << curr->selection_statement << std::endl;
-			std::cout << "iteration_statement : " << curr->iteration_statement << std::endl;
-			std::cout << "jump_statement : " << curr->jump_statement << std::endl;
-			std::cout << "asm statement : " << curr->asm_statement << std::endl;
-			std::cout << "p_next : " << curr->p_next << std::endl;
-			std::cout << "p_prev : " << curr->p_prev << std::endl;
+			log::line("||||||||||||||||||||||| statement ||||||||||||||||||||");
+			log::line("ptr : ", curr);
+			log::line("type : ", curr->type);
+			log::line("labled_statement : ", curr->labled_statement);
+			log::line("expression_statement : ", curr->expression_statement);
+			log::line("selection_statement : ", curr->selection_statement);
+			log::line("iteration_statement : ", curr->iteration_statement);
+			log::line("jump_statement : ", curr->jump_statement);
+			log::line("asm statement : ", curr->asm_statement);
+			log::line("p_next : ", curr->p_next);
+			log::line("p_prev : ", curr->p_prev);
 			switch (curr->type) {
 				case LABEL_STMT :
 					curr->labled_statement->print();
@@ -141,152 +152,152 @@ namespace xlang {
 				case ASM_STMT :
 					curr->asm_statement->print();
 					break;
-
+				
 				default:
 					break;
 			}
-
-			std::cout << "||||||||||||||||||||||||||||||||||||||||||||||||||||||" << std::endl;
+			
+			log::line("||||||||||||||||||||||||||||||||||||||||||||||||||||||");
 			curr = curr->p_next;
 		}
 	}
-
-	void func_call_expr::print() {
-		std::cout << "(func call expression : " << this << ")" << std::endl;
-		std::cout << "{\n";
-		std::cout << "  function : " << function << std::endl;
+	
+	void call_expr_t::print() {
+		log::line("(func call expression : ", this, ")");
+		log::line("{");
+		log::line("  function : ", function);
 		for (auto &e: expression_list) {
 			e->print();
 		}
-
-		std::cout << "}\n";
+		
+		log::line("}");
 		function->print();
 		for (auto &e: expression_list) {
 			e->print();
 		}
 	}
-
+	
 	void select_stmt::print() {
-		std::cout << "------------- selection statement -----------------" << std::endl;
-		std::cout << "ptr : " << this << std::endl;
-		std::cout << "iftok : " << iftok.string << std::endl;
-		std::cout << "elsetok : " << elsetok.string << std::endl;
-		std::cout << "condition : " << condition << std::endl;
-		std::cout << "if_statement : " << if_statement << std::endl;
-		std::cout << "else_statement : " << else_statement << std::endl;
+		log::line("------------- selection statement -----------------");
+		log::line("ptr : ", this);
+		log::line("iftok : ", iftok.string);
+		log::line("elsetok : ", elsetok.string);
+		log::line("condition : ", condition);
+		log::line("if_statement : ", if_statement);
+		log::line("else_statement : ", else_statement);
 		condition->print();
 		if_statement->print();
 		else_statement->print();
-		std::cout << "---------------------------------------------------" << std::endl;
+		log::line("---------------------------------------------------");
 	}
-
+	
 	void iter_stmt::print() {
-		std::cout << "------------ iteration statement -----------------" << std::endl;
-		std::cout << "ptr : " << this << std::endl;
-		std::cout << "type : " << type << std::endl;
+		log::line("------------ iteration statement -----------------");
+		log::line("ptr : ", this);
+		log::line("type : ", type);
 		switch (type) {
 			case WHILE_STMT :
-				std::cout << "whiletok : " << _while.whiletok.string << std::endl;
-				std::cout << "condition : " << _while.condition << std::endl;
-				std::cout << "statement : " << _while.statement << std::endl;
+				log::line("whiletok : ", _while.whiletok.string);
+				log::line("condition : ", _while.condition);
+				log::line("statement : ", _while.statement);
 				_while.condition->print();
 				_while.statement->print();
 				break;
 			case DOWHILE_STMT :
-				std::cout << "dotok : " << _dowhile.dotok.string << std::endl;
-				std::cout << "whiletok : " << _dowhile.whiletok.string << std::endl;
-				std::cout << "condition : " << _dowhile.condition << std::endl;
-				std::cout << "statement : " << _dowhile.statement << std::endl;
+				log::line("dotok : ", _dowhile.dotok.string);
+				log::line("whiletok : ", _dowhile.whiletok.string);
+				log::line("condition : ", _dowhile.condition);
+				log::line("statement : ", _dowhile.statement);
 				_dowhile.condition->print();
 				_dowhile.statement->print();
 				break;
 			case FOR_STMT :
-				std::cout << "fortok : " << _for.fortok.string << std::endl;
-				std::cout << "init_expression : " << _for.init_expression << std::endl;
-				std::cout << "condition : " << _for.condition << std::endl;
-				std::cout << "update_expression : " << _for.update_expression << std::endl;
-				std::cout << "statement : " << _for.statement << std::endl;
-				_for.init_expression->print();
+				log::line("fortok : ", _for.fortok.string);
+				log::line("init_expr : ", _for.init_expr);
+				log::line("condition : ", _for.condition);
+				log::line("update_expr : ", _for.update_expr);
+				log::line("statement : ", _for.statement);
+				_for.init_expr->print();
 				_for.condition->print();
-				_for.update_expression->print();
+				_for.update_expr->print();
 				_for.statement->print();
 				break;
 		}
-		std::cout << "---------------------------------------------------" << std::endl;
+		log::line("---------------------------------------------------");
 	}
-
+	
 	void expr::print() {
-
-		std::cout << "(expression : " << this << ")" << std::endl;
+		
+		log::line("(expression : ", this, ")");
 		switch (expr_kind) {
 			case PRIMARY_EXPR :
-				std::cout << "  [primary expression : " << primary_expression << "]" << std::endl;
-				primary_expression->print();
+				log::line("  [primary expression : ", primary_expr, "]");
+				primary_expr->print();
 				break;
 			case ASSGN_EXPR :
-				std::cout << "  [assignment expression : " << assgn_expression << "]" << std::endl;
-				assgn_expression->print();
+				log::line("  [assignment expression : ", assgn_expr, "]");
+				assgn_expr->print();
 				break;
 			case SIZEOF_EXPR :
-				std::cout << "  [sizeof expression : " << sizeof_expression << "]" << std::endl;
-				sizeof_expression->print();
+				log::line("  [sizeof expression : ", sizeof_expr, "]");
+				sizeof_expr->print();
 				break;
 			case CAST_EXPR :
-				std::cout << "  [cast expression : " << cast_expression << "]" << std::endl;
-				cast_expression->print();
+				log::line("  [cast expression : ", cast_expr, "]");
+				cast_expr->print();
 				break;
 			case ID_EXPR :
-				std::cout << "  [id expression : " << id_expression << "]" << std::endl;
-				id_expression->print();
+				log::line("  [id expression : ", id_expr, "]");
+				id_expr->print();
 				break;
 			case FUNC_CALL_EXPR :
-				std::cout << "funccall expression : " << func_call_expression << std::endl;
-				func_call_expression->print();
+				log::line("funccall expression : ", call_expr);
+				call_expr->print();
 				break;
 			default:
-				std::cout << "  [invalid expression to print]" << std::endl;
+				log::line("  [invalid expression to print]");
 				break;
 		}
 	}
-
+	
 	void asm_stmt::print() {
 		std::vector<st_asm_operand *>::iterator it;
 		asm_stmt *temp = this;
 		while (temp != nullptr) {
-			std::cout << "--------------- asm statement ------------------" << std::endl;
-			std::cout << "ptr : " << temp << std::endl;
-			std::cout << "p_next : " << temp->p_next << std::endl;
-			std::cout << "template : " << temp->asm_template.string << std::endl;
-			std::cout << "~~~~~~~~~ output operand ~~~~~~~~~~" << std::endl;
+			log::line("--------------- asm statement ------------------");
+			log::line("ptr : ", temp);
+			log::line("p_next : ", temp->p_next);
+			log::line("template : ", temp->asm_template.string);
+			log::line("~~~~~~~~~ output operand ~~~~~~~~~~");
 			for (const auto &t: temp->output_operand) {
 				t->print();
 			}
-			std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
-			std::cout << "~~~~~~~~~ input operand ~~~~~~~~~~" << std::endl;
+			log::line("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+			log::line("~~~~~~~~~ input operand ~~~~~~~~~~");
 			it = temp->input_operand.begin();
 			for (const auto &t: temp->input_operand) {
 				t->print();
 			}
-			std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
-			std::cout << "------------------------------------------------" << std::endl;
+			log::line("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+			log::line("------------------------------------------------");
 			temp = temp->p_next;
 		}
 	}
-
+	
 	void jump_stmt::print() {
-		std::cout << "------------ jump statement -----------------" << std::endl;
-		std::cout << "ptr : " << this << std::endl;
-		std::cout << "type : " << type << std::endl;
-		std::cout << "tok : " << tok.string << std::endl;
-		std::cout << "expression : " << expression << std::endl;
-		std::cout << "goto_id : " << goto_id.string << std::endl;
+		log::line("------------ jump statement -----------------");
+		log::line("ptr : ", this);
+		log::line("type : ", type);
+		log::line("tok : ", tok.string);
+		log::line("expression : ", expression);
+		log::line("goto_id : ", goto_id.string);
 		expression->print();
-		std::cout << "-----------------------------------------------" << std::endl;
+		log::line("-----------------------------------------------");
 	}
-
+	
 	void st_asm_operand::print() {
-		std::cout << "constraint : " << constraint.string << std::endl;
-		std::cout << "expression : " << expression << std::endl;
+		log::line("constraint : ", constraint.string);
+		log::line("expression : ", expression);
 		expression->print();
 	}
 }

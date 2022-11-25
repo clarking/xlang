@@ -19,6 +19,7 @@ add_executable(xlang
         src/regs.cpp
         src/symtab.cpp
         src/tree.cpp
-        src/x86_gen.cpp)
+        src/gen.cpp
+        src/compiler.cpp)
 
 target_include_directories(xlang PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)

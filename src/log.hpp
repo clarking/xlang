@@ -3,64 +3,80 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-#ifndef LOG_HPP
-#define LOG_HPP
+#pragma once
 
-#include "types.hpp"
 #include <iomanip>
 #include <cstdarg>
-
-
-extern int log_level;
+#include <iostream>
+#include <vector>
+#include "compiler.hpp"
+#include "token.hpp"
 
 namespace xlang {
-
+	
 	#define    LOG_DISABLE  0
 	#define    LOG_MINIMAL  1
 	#define    LOG_VERBOSE  2
 	#define    LOG_ANNOYING 3
-
-	template<typename ...Args>
-	void log_error(Args &&...args) {
-		(std::cout << ... << args);
-		exit(-1);
-	}
-
-	template<typename ...Args>
-	void log_error_at(loc_t loc, Args &&...args) {
-		std::cout << "[" << loc.line << ":" << loc.col << "] ";
-		(std::cout << ... << args);
-		exit(-1);
-	}
-
-	template<typename ...Args>
-	void log_error_at(std::string filename, loc_t loc, Args &&...args) {
-		std::cout << filename << ": [" << loc.line << ":" << loc.col << "]\n";
-		(std::cout << ... << args);
-		exit(-1);
-	}
-
-	template<typename ...Args>
-	void log_info(Args &&...args) {
-
-		if (log_level != LOG_DISABLE) {
+	
+	class log {
+		public:
+		
+		template<typename ...Args>
+		static void error(Args &&...args) {
 			(std::cout << ... << args);
+			std::cout << '\n';
 		}
-	}
-
-	template<typename ...Args>
-	void log_warn(Args &&...args) {
-		if (log_level != LOG_DISABLE) {
+		
+		template<typename ...Args>
+		static void error_at(loc_t loc, Args &&...args) {
+			//std::cout << cfg.file.name << ": [" << loc.line << ":" << loc.col << "] ";
+			// TODO: log file path and name here, absolute if possible
+			std::cout << ": [" << loc.line << ":" << loc.col << "] ";
 			(std::cout << ... << args);
+			exit(-1);
 		}
-	}
-
-	template<typename ...Args>
-	void log_debug(Args &&...args) {
-		if (log_level != LOG_DISABLE) {
-			(std::cout << ... << args);
+		
+		template<typename ...Args>
+		static void info(Args &&...args) {
+			if (compiler::global.log_level != LOG_DISABLE) {
+				(std::cout << ... << args);
+			}
 		}
-	}
+		
+		template<typename ...Args>
+		static void warn(Args &&...args) {
+			if (compiler::global.log_level != LOG_DISABLE) {
+				(std::cout << ... << args);
+			}
+		}
+		
+		template<typename ...Args>
+		static void debug(Args &&...args) {
+			if (compiler::global.log_level != LOG_DISABLE) {
+				(std::cout << ... << args);
+			}
+		}
+		
+		template<typename ...Args>
+		static void line(Args &&...args) {
+			if (compiler::global.log_level != LOG_DISABLE) {
+				(std::cout << ... << args);
+				std::cout << '\n';
+			}
+		}
+		
+		static void print_tokens(std::vector<token> toks) {
+			for (const auto &tok: toks) {
+				line(tok.string);
+			}
+		}
+		
+		static void print_lines(std::vector<std::string> lines) {
+			for (const auto &l: lines) {
+				std::cout << l << "\n";
+			}
+		}
+	};
+	
 }
-
-#endif

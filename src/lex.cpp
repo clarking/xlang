@@ -5,158 +5,131 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-/*
-* Contains lexical analyzer
-* the final function get_next_token() returns a token defined in token.hpp file
-*/
+
+// lexical analyzer
+
 
 #include <iostream>
-#include <fstream>
-#include <vector>
-#include <map>
+
 #include <stack>
 #include <algorithm>
 #include "token.hpp"
-#include "types.hpp"
 #include "log.hpp"
 #include "lex.hpp"
 
 namespace xlang {
-	lexer *lex;
-	std::string filename = "";
-
-	lexer::lexer(std::string _filename) {
-
-		if (_filename.size() <= 0) {
-			log_error("No files provided");
+	
+	
+	void lexer::init() {
+		
+		if (!file_exists(file.path)) {
+			log::error(file.name, "No such file of directory");
 			std::exit(EXIT_FAILURE);
 		}
-
-		check_file_exists(_filename);
-		this->filename = _filename;
-		filename = _filename;
-
-		this->key_tokens = {
-				{"asm",      KEY_ASM},
-				{"break",    KEY_BREAK},
-				{"char",     KEY_CHAR},
-				{"const",    KEY_CONST},
-				{"continue", KEY_CONTINUE},
-				{"do",       KEY_DO},
-				{"double",   KEY_DOUBLE},
-				{"else",     KEY_ELSE},
-				{"extern",   KEY_EXTERN},
-				{"float",    KEY_FLOAT},
-				{"for",      KEY_FOR},
-				{"global",   KEY_GLOBAL},
-				{"goto",     KEY_GOTO},
-				{"if",       KEY_IF},
-				{"int",      KEY_INT},
-				{"long",     KEY_LONG},
-				{"record",   KEY_RECORD},
-				{"return",   KEY_RETURN},
-				{"short",    KEY_SHORT},
-				{"sizeof",   KEY_SIZEOF},
-				{"static",   KEY_STATIC},
-				{"void",     KEY_VOID},
-				{"while",    KEY_WHILE}
-		};
-
+		
+		
+		
+		
+		// TODO: Read this tokens from elsewhere
+		key_tokens = {{"asm",      KEY_ASM},
+		              {"break",    KEY_BREAK},
+		              {"char",     KEY_CHAR},
+		              {"const",    KEY_CONST},
+		              {"continue", KEY_CONTINUE},
+		              {"do",       KEY_DO},
+		              {"double",   KEY_DOUBLE},
+		              {"else",     KEY_ELSE},
+		              {"extern",   KEY_EXTERN},
+		              {"float",    KEY_FLOAT},
+		              {"for",      KEY_FOR},
+		              {"global",   KEY_GLOBAL},
+		              {"goto",     KEY_GOTO},
+		              {"if",       KEY_IF},
+		              {"int",      KEY_INT},
+		              {"long",     KEY_LONG},
+		              {"record",   KEY_RECORD},
+		              {"return",   KEY_RETURN},
+		              {"short",    KEY_SHORT},
+		              {"sizeof",   KEY_SIZEOF},
+		              {"static",   KEY_STATIC},
+		              {"void",     KEY_VOID},
+		              {"while",    KEY_WHILE}};
+		
 		std::sort(symbols.begin(), symbols.end());
 	}
-
+	
 	std::string lexer::get_filename() {
-		return this->filename;
+		return file.name;
 	}
-
+	
 	bool lexer::is_eof(char ch) {
 		return (ch <= 0);
 	}
-
-	void lexer::clear_buffer() {
-		for (int i = 0; i < BUFFER_SIZE; i++) {
-			buffer[i] = '\0';
+	
+	
+	bool lexer::file_read(src_file &src) {
+		std::ifstream input(src.path);
+		
+		if (input.is_open()) {
+			std::string ln;
+			while (std::getline(input, ln)) {
+				src.content += ln;
+			}
+			
+			input.close();
+			src.loaded = true;
+			buffer_index = 0;
+			return true;
 		}
+		
+		return false;
 	}
-
-	void lexer::check_file_exists(std::string _filename) {
-		std::ifstream test(_filename);
-		if (!test) {
-			log_error(_filename, "No such file of directory");
-			std::exit(EXIT_FAILURE);
+	
+	bool lexer::file_exists(const std::string &path) {
+		
+		if (path.empty())
+			return false;
+		
+		std::ifstream test(path);
+		
+		if (test.is_open()) {
 			test.close();
+			return true;
 		}
+		
+		return false;
 	}
-
-	/*
-	read 512 characters from file into buffer
-	return each character from buffer,
-	if buffer is empty, then read another 512 bytes, and continue
-	*/
+	
 	char lexer::get_next_char() {
-		char ch;
-
-		if (!inp_file.is_open()) {
-			inp_file.open(filename, std::ios::in);
+		
+		if (!file.loaded) {
+			file_read(file);
 			eof_flag = false;
 		}
-
-		if (buffer_index == 0 && !unget_flag) {
-			inp_file.read(buffer, BUFFER_SIZE);
-
-			if (is_eof(buffer[buffer_index])) {
-				inp_file.close();
-				buffer_index = 0;
-				clear_buffer();
-				eof_flag = true;
-				return -1;
-			}
-			else {
-				ch = buffer[buffer_index];
-				buffer_index++;
-			}
-		}
-		else {
-			if (buffer_index < BUFFER_SIZE) {
-				if (is_eof(buffer[buffer_index])) {
-					inp_file.close();
-					buffer_index = 0;
-					eof_flag = true;
-					clear_buffer();
-					return -1;
-				}
-				else {
-					ch = buffer[buffer_index];
-					buffer_index++;
-				}
-			}
-			else {
-				unget_flag = false;
-				buffer_index = 0;
-				clear_buffer();
-				return get_next_char();
-			}
-		}
-
-		return ch;
+		
+		if (buffer_index < file.content.size())
+			return file.content[buffer_index++];
+		
+		eof_flag = true;
+		unget_flag = false;
+		return 0;
 	}
-
+	
 	/*
-	putback returned character into buffer
+	putback returned character into file.content
 	*/
 	void lexer::unget_char() {
-		if (inp_file.is_open()) {
-			buffer_index--;
-			if (buffer_index <= 0) {
-				buffer_index = 0;
-				unget_flag = true;
-			}
-			else {
-				unget_flag = false;
-			}
+		
+		buffer_index--;
+		if (buffer_index <= 0) {
+			buffer_index = 0;
+			unget_flag = true;
+		}
+		else {
+			unget_flag = false;
 		}
 	}
-
+	
 	void lexer::consume_chars_till(char end) {
 		char ch;
 		while (!is_eof(ch = get_next_char())) {
@@ -171,7 +144,7 @@ namespace xlang {
 			}
 		}
 	}
-
+	
 	void lexer::consume_chars_till(std::string chars) {
 		char ch;
 		while (!is_eof(ch = get_next_char())) {
@@ -186,7 +159,7 @@ namespace xlang {
 			}
 		}
 	}
-
+	
 	void lexer::consume_chars_till_symbol() {
 		char ch;
 		while (!is_eof(ch = get_next_char())) {
@@ -203,7 +176,7 @@ namespace xlang {
 		}
 		unget_char();
 	}
-
+	
 	/*
 	symbol : one of
 	  ! % ^ ~ & * ( ) - + = [ ] { } | : ; < > , . / \ ' " @ # ` ?
@@ -211,7 +184,7 @@ namespace xlang {
 	bool lexer::symbol(char ch) {
 		return std::binary_search(symbols.begin(), symbols.end(), ch);
 	}
-
+	
 	/*
 	digit : one of
 	    0 1 2 3 4 5 6 7 8 9
@@ -219,7 +192,7 @@ namespace xlang {
 	bool lexer::digit(char ch) {
 		return ((ch - '0' >= 0) && (ch - '0' <= 9));
 	}
-
+	
 	/*
 	nonzero-digit : one of
 		1 2 3 4 5 6 7 8 9
@@ -227,7 +200,7 @@ namespace xlang {
 	bool lexer::nonzero_digit(char ch) {
 		return ((ch - '0' >= 1) && (ch - '0' <= 9));
 	}
-
+	
 	/*
 	octal-digit : one of
 	  0 1 2 3 4 5 6 7
@@ -235,7 +208,7 @@ namespace xlang {
 	bool lexer::octal_digit(char ch) {
 		return ((ch - '0' >= 0) && (ch - '0' <= 7));
 	}
-
+	
 	/*
 	hexadecimal-digit : one of
 		0 1 2 3 4 5 6 7 8 9
@@ -243,22 +216,18 @@ namespace xlang {
 		A B C D E F
 	*/
 	bool lexer::hexadecimal_digit(char ch) {
-		return (((ch - '0' >= 0) && (ch - '0' <= 9)) ||
-		        (ch >= 'a' && ch <= 'f') ||
-		        (ch >= 'A' && ch <= 'F'));
+		return (((ch - '0' >= 0) && (ch - '0' <= 9)) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F'));
 	}
-
+	
 	/*
 	non-digit : one of
 	  _ $ a b c d e f g h i j k l m n o p q r s t u v w x y z
 	  A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
 	*/
 	bool lexer::non_digit(char ch) {
-		return (ch == '_' || ch == '$'
-		        || (ch >= 'a' && ch <= 'z')
-		        || (ch >= 'A' && ch <= 'Z'));
+		return (ch == '_' || ch == '$' || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'));
 	}
-
+	
 	/*
 	comment :
 	  / / any character except newline
@@ -269,7 +238,7 @@ namespace xlang {
 		char peek;
 		int multicomment_line = 0, mulcmnt_col = 0;
 		bool is_comment_complete = false;
-
+		
 		if (is_eof(ch)) {
 			unget_char();
 			return false;
@@ -286,7 +255,7 @@ namespace xlang {
 						break;
 					}
 				} while (ch != '\n');
-
+				
 				//multi line comment / *  * /
 			}
 			else if (ch == '*') {
@@ -313,8 +282,8 @@ namespace xlang {
 						}
 						else {
 							if (is_eof(peek)) {
-								log_error(get_filename(), "incomplete comment", multicomment_line, mulcmnt_col);
-
+								log::error(get_filename(), "incomplete comment", multicomment_line, mulcmnt_col);
+								
 								return false;
 							}
 						}
@@ -325,10 +294,8 @@ namespace xlang {
 				}
 				else {
 					unget_char();
-					log_error(get_filename(),
-					          "incomplete comment",
-					          multicomment_line, mulcmnt_col);
-
+					log::error(get_filename(), "incomplete comment", multicomment_line, mulcmnt_col);
+					
 					return false;
 				}
 			}
@@ -340,7 +307,7 @@ namespace xlang {
 		line++;
 		return true;
 	}
-
+	
 	/*
 	assign lexeme, location and return that token
 	*/
@@ -357,7 +324,7 @@ namespace xlang {
 		tok.loc.line = line;
 		return tok;
 	}
-
+	
 	token lexer::make_token(std::string lexm, token_t tok1) {
 		token tok;
 		tok.number = tok1;
@@ -371,7 +338,7 @@ namespace xlang {
 		tok.loc.line = line;
 		return tok;
 	}
-
+	
 	/*
 	literal :
 	    integer-literal
@@ -383,7 +350,7 @@ namespace xlang {
 		char ch = get_next_char();
 		char peek;
 		token tok;
-
+		
 		if (is_eof(ch)) {
 			tok.number = END_OF_FILE;
 		}
@@ -391,7 +358,7 @@ namespace xlang {
 			if (ch == '0' || nonzero_digit(ch)) {
 				unget_char();
 				tok = integer_literal();
-
+				
 				peek = get_next_char();
 				if (is_eof(peek)) {
 					tok.number = END_OF_FILE;
@@ -409,12 +376,12 @@ namespace xlang {
 				tok = string_literal();
 			}
 		}
-
+		
 		lexeme.clear();
-
+		
 		return tok;
 	}
-
+	
 	/*
 	character-literal :
 	  'c-char-sequence'
@@ -424,7 +391,7 @@ namespace xlang {
 		char ch = get_next_char();
 		char peek;
 		token tok;
-
+		
 		if (is_eof(ch)) {
 			tok.number = END_OF_FILE;
 		}
@@ -438,34 +405,34 @@ namespace xlang {
 			else {
 				unget_char();
 				c_char_sequence();
-
+				
 				tok = make_token(LIT_CHAR);
-
+				
 				if (error_flag) {
 					peek = get_next_char();
 					if (peek == '\\') {
 						consume_chars_till("\n\'");
-						log_error_at(get_filename(), tok.loc, "invalid character incomplete escape sequence", lexeme);
-
+						log::error_at(tok.loc, "invalid character incomplete escape sequence", lexeme);
+						
 					}
 					else if (peek == '\n') {
 						consume_chars_till("\n\'");
-						log_error_at(get_filename(), tok.loc, "missing terminating character", lexeme);
+						log::error_at(tok.loc, "missing terminating character", lexeme);
 					}
 					else {
 						consume_chars_till("\n\'");
-						log_error_at(get_filename(), tok.loc, "invalid character ", lexeme);
+						log::error_at(tok.loc, "invalid character ", lexeme);
 					}
 					//	error_count++;
-
+					
 				}
 			}
 		}
-
+		
 		lexeme.clear();
 		return tok;
 	}
-
+	
 	/*
 	c-char-sequence :
 	  c-char
@@ -478,7 +445,7 @@ namespace xlang {
 	void lexer::c_char_sequence() {
 		char ch = get_next_char();
 		char peek;
-
+		
 		if (is_eof(ch)) {
 			eof_flag = true;
 			return;
@@ -486,7 +453,7 @@ namespace xlang {
 		else {
 			if (ch == '\\') {
 				peek = get_next_char();
-
+				
 				if (is_eof(peek)) {
 					eof_flag = true;
 					return;
@@ -515,9 +482,9 @@ namespace xlang {
 				col++;
 			}
 		}
-
+		
 		peek = get_next_char();
-
+		
 		if (is_eof(peek)) {
 			eof_flag = true;
 			return;
@@ -533,7 +500,7 @@ namespace xlang {
 			}
 		}
 	}
-
+	
 	/*
 	string-literal :
 	  "s-char-sequence"
@@ -543,7 +510,7 @@ namespace xlang {
 		char ch = get_next_char();
 		char peek;
 		token tok;
-
+		
 		if (is_eof(ch)) {
 			tok.number = END_OF_FILE;
 		}
@@ -557,37 +524,36 @@ namespace xlang {
 			else {
 				unget_char();
 				s_char_sequence();
-
+				
 				tok = make_token(LIT_STRING);
-
+				
 				if (error_flag) {
 					peek = get_next_char();
 					if (peek == '\\') {
 						consume_chars_till("\n\"");
-						log_error_at(get_filename(), tok.loc, "invalid string incomplete escape sequence", lexeme);
-
+						log::error_at(tok.loc, "invalid string incomplete escape sequence", lexeme);
+						
 					}
 					else if (peek == '\n') {
 						consume_chars_till("\n\"");
-						log_error_at(get_filename(), tok.loc,
-						             "missing terminating string", lexeme);
-
+						log::error_at(tok.loc, "missing terminating string", lexeme);
+						
 					}
 					else {
 						consume_chars_till("\n\"");
-						log_error_at(get_filename(), tok.loc, "invalid string ", lexeme);
+						log::error_at(tok.loc, "invalid string ", lexeme);
 					}
-
+					
 					//	error_count++;
-
+					
 				}
 			}
 		}
-
+		
 		lexeme.clear();
 		return tok;
 	}
-
+	
 	/*
 	s-char-sequence :
 	  s-char
@@ -600,7 +566,7 @@ namespace xlang {
 	void lexer::s_char_sequence() {
 		char ch = get_next_char();
 		char peek;
-
+		
 		if (is_eof(ch)) {
 			eof_flag = true;
 			return;
@@ -608,7 +574,7 @@ namespace xlang {
 		else {
 			if (ch == '\\') {
 				peek = get_next_char();
-
+				
 				if (is_eof(peek)) {
 					eof_flag = true;
 					return;
@@ -637,9 +603,9 @@ namespace xlang {
 				col++;
 			}
 		}
-
+		
 		peek = get_next_char();
-
+		
 		if (is_eof(peek)) {
 			eof_flag = true;
 			return;
@@ -655,7 +621,7 @@ namespace xlang {
 			}
 		}
 	}
-
+	
 	/*
 	integer-literal :
 		decimal-literal
@@ -668,7 +634,7 @@ namespace xlang {
 		char ch = get_next_char();
 		char peek;
 		token tok;
-
+		
 		//check if end of file
 		if (is_eof(ch)) {
 			tok.number = END_OF_FILE;
@@ -687,7 +653,7 @@ namespace xlang {
 					tok = hexadecimal_literal();
 					if (tok.string.size() == 2)
 						tok.string = tok.string + "0";
-
+					
 					//if peeked character is b or B
 				}
 				else if (peek == 'b' || peek == 'B') {
@@ -702,13 +668,13 @@ namespace xlang {
 					unget_char();
 					unget_char();
 					tok = octal_literal();
-
+					
 					// if peeked character is .
 				}
 				else if (peek == '.') {
 					tok = float_literal();
 					tok.string.insert(0, "0.");
-
+					
 					// if nothing else
 				}
 				else {
@@ -720,19 +686,19 @@ namespace xlang {
 						tok = make_token(LIT_OCTAL);
 					}
 				}
-
+				
 				// if first digit is not zero
 			}
 			else if (nonzero_digit(ch)) {
 				//call decimal function
 				unget_char();
 				tok = decimal_literal();
-
+				
 			}
 		}
 		return tok;
 	}
-
+	
 	/*
 	decimal-literal :
 	  nonzero-digit
@@ -742,7 +708,7 @@ namespace xlang {
 		char ch = get_next_char();
 		char peek;
 		token tok;
-
+		
 		if (is_eof(ch)) {
 			tok.number = END_OF_FILE;
 		}
@@ -750,19 +716,17 @@ namespace xlang {
 			if (nonzero_digit(ch)) {
 				lexeme.push_back(ch);
 				col++;
-
+				
 				sub_decimal_literal();
-
+				
 				if (error_flag) {
 					consume_chars_till_symbol();
-
-					log_error(get_filename(),
-					          "invalid decimal ", lexeme, line,
-					          col - lexeme.size());
+					
+					log::error(get_filename(), "invalid decimal ", lexeme, line, col - lexeme.size());
 				}
-
+				
 				peek = get_next_char();
-
+				
 				if (peek == '.') {
 					tok = float_literal();
 					lexeme.push_back('.');
@@ -788,12 +752,12 @@ namespace xlang {
 				}
 			}
 			else {
-
+			
 			}
 		}
 		return tok;
 	}
-
+	
 	/*
 	sub-decimal-literal :
 	  digit
@@ -802,7 +766,7 @@ namespace xlang {
 	void lexer::sub_decimal_literal() {
 		char ch = get_next_char();
 		char peek;
-
+		
 		if (is_eof(ch)) {
 			eof_flag = true;
 			return;
@@ -823,7 +787,7 @@ namespace xlang {
 				}
 			}
 		}
-
+		
 		peek = get_next_char();
 		if (is_eof(peek)) {
 			eof_flag = true;
@@ -847,7 +811,7 @@ namespace xlang {
 			}
 		}
 	}
-
+	
 	/*
 	octal-literal :
 		0
@@ -856,7 +820,7 @@ namespace xlang {
 	token lexer::octal_literal() {
 		char ch = get_next_char();
 		token tok;
-
+		
 		if (is_eof(ch)) {
 			tok.number = END_OF_FILE;
 		}
@@ -864,17 +828,15 @@ namespace xlang {
 			if (ch == '0') {
 				lexeme.push_back(ch);
 				col++;
-
+				
 				sub_octal_literal();
-
+				
 				if (error_flag) {
 					consume_chars_till_symbol();
-
-					log_error(get_filename(),
-					          "invalid octal ", lexeme, line,
-					          col - lexeme.size());
+					
+					log::error(get_filename(), "invalid octal ", lexeme, line, col - lexeme.size());
 				}
-
+				
 				if (eof_flag) {
 					if (lexeme.size() > 0) {
 						tok = make_token(LIT_OCTAL);
@@ -894,7 +856,7 @@ namespace xlang {
 		}
 		return tok;
 	}
-
+	
 	/*
 	sub-octal-literal :
 	  octal-digit
@@ -903,7 +865,7 @@ namespace xlang {
 	void lexer::sub_octal_literal() {
 		char ch = get_next_char();
 		char peek;
-
+		
 		if (is_eof(ch)) {
 			eof_flag = true;
 			return;
@@ -924,7 +886,7 @@ namespace xlang {
 				}
 			}
 		}
-
+		
 		peek = get_next_char();
 		if (is_eof(peek)) {
 			eof_flag = true;
@@ -948,7 +910,7 @@ namespace xlang {
 			}
 		}
 	}
-
+	
 	/*
 	hexadecimal-literal :
 	  0x sub-hexadecimal-literal
@@ -957,7 +919,7 @@ namespace xlang {
 	token lexer::hexadecimal_literal() {
 		char ch = get_next_char();
 		token tok;
-
+		
 		if (is_eof(ch)) {
 			tok.number = END_OF_FILE;
 		}
@@ -966,10 +928,8 @@ namespace xlang {
 			sub_hexadecimal_literal();
 			if (error_flag) {
 				consume_chars_till_symbol();
-
-				log_error(get_filename(),
-				          "invalid hexadecimal ", lexeme, line,
-				          col - lexeme.size());
+				
+				log::error(get_filename(), "invalid hexadecimal ", lexeme, line, col - lexeme.size());
 			}
 			if (eof_flag) {
 				if (lexeme.size() > 0) {
@@ -989,7 +949,7 @@ namespace xlang {
 		}
 		return tok;
 	}
-
+	
 	/*
 	sub-hexadecimal-literal :
 	  hexadecimal-digit
@@ -998,7 +958,7 @@ namespace xlang {
 	void lexer::sub_hexadecimal_literal() {
 		char ch = get_next_char();
 		char peek;
-
+		
 		if (is_eof(ch)) {
 			eof_flag = true;
 			return;
@@ -1042,7 +1002,7 @@ namespace xlang {
 			}
 		}
 	}
-
+	
 	/*
 	binary-literal :
 	  0b sub-binary-literal
@@ -1051,20 +1011,18 @@ namespace xlang {
 	token lexer::binary_literal() {
 		char ch = get_next_char();
 		token tok;
-
+		
 		if (is_eof(ch)) {
 			tok.number = END_OF_FILE;
 		}
 		else {
 			unget_char();
 			sub_binary_literal();
-
+			
 			if (error_flag) {
 				consume_chars_till_symbol();
-
-				log_error(get_filename(),
-				          "invalid binary ", lexeme, line,
-				          col - lexeme.size());
+				
+				log::error(get_filename(), "invalid binary ", lexeme, line, col - lexeme.size());
 			}
 			if (eof_flag) {
 				if (lexeme.size() > 0) {
@@ -1085,7 +1043,7 @@ namespace xlang {
 		lexeme.clear();
 		return tok;
 	}
-
+	
 	/*
 	sub-binary-literal :
 	  one of 0 1
@@ -1094,7 +1052,7 @@ namespace xlang {
 	void lexer::sub_binary_literal() {
 		char ch = get_next_char();
 		char peek;
-
+		
 		if (is_eof(ch)) {
 			eof_flag = true;
 			return;
@@ -1138,7 +1096,7 @@ namespace xlang {
 			}
 		}
 	}
-
+	
 	/*
 	float-literal :
 		digit-sequence . digit-sequence
@@ -1150,17 +1108,15 @@ namespace xlang {
 		digit_sequence(lexm);
 		if (error_flag) {
 			consume_chars_till_symbol();
-
-			log_error(get_filename(),
-			          "invalid float ", lexm, line,
-			          col - lexm.size());
+			
+			log::error(get_filename(), "invalid float ", lexm, line, col - lexm.size());
 		}
 		else {
 			tok = make_token(lexm, LIT_FLOAT);;
 		}
 		return tok;
 	}
-
+	
 	/*
 	digit-sequence :
 	  digit
@@ -1169,7 +1125,7 @@ namespace xlang {
 	void lexer::digit_sequence(std::string &lexm) {
 		char ch = get_next_char();
 		char peek;
-
+		
 		if (is_eof(ch)) {
 			eof_flag = true;
 			return;
@@ -1207,7 +1163,7 @@ namespace xlang {
 			}
 		}
 	}
-
+	
 	/*
 	identifier :
 	  non-digit
@@ -1217,7 +1173,7 @@ namespace xlang {
 		char ch = get_next_char();
 		char peek;
 		token tok;
-
+		
 		//non-digit
 		if (is_eof(ch)) {
 			tok.number = END_OF_FILE;
@@ -1230,7 +1186,7 @@ namespace xlang {
 				col++;
 			}
 		}
-
+		
 		//non-digit sub-identifier
 		peek = get_next_char();
 		if (is_eof(peek)) {
@@ -1238,10 +1194,10 @@ namespace xlang {
 		}
 		else {
 			if (non_digit(peek) || digit(peek)) {
-
+				
 				unget_char();
 				sub_identifier();
-
+				
 				if (eof_flag) {
 					if (lexeme.size() > 0) {
 						tok.number = IDENTIFIER;
@@ -1269,17 +1225,17 @@ namespace xlang {
 				}
 			}
 		}
-
+		
 		std::unordered_map<std::string, token_t>::iterator find_it = key_tokens.find(lexeme);
 		if (find_it != key_tokens.end()) {
 			tok.number = find_it->second;
 		}
-
+		
 		lexeme.clear();
-
+		
 		return tok;
 	}
-
+	
 	/*
 	sub-identifier :
 	  non-digit
@@ -1290,7 +1246,7 @@ namespace xlang {
 	void lexer::sub_identifier() {
 		char ch = get_next_char();
 		char peek;
-
+		
 		//non-digit
 		//digit
 		if (is_eof(ch)) {
@@ -1303,11 +1259,11 @@ namespace xlang {
 				col++;
 			}
 		}
-
+		
 		//non-digit sub-identifier
 		//digit sub-identifier
 		peek = get_next_char();
-
+		
 		if (is_eof(peek)) {
 			eof_flag = true;
 			return;
@@ -1323,12 +1279,12 @@ namespace xlang {
 			}
 		}
 	}
-
+	
 	token lexer::operator_token() {
 		char ch = get_next_char();
 		char peek;
 		token tok;
-
+		
 		switch (ch) {
 			case '+' : {
 				peek = get_next_char();
@@ -1347,7 +1303,7 @@ namespace xlang {
 				}
 			}
 				break;
-
+			
 			case '-' : {
 				peek = get_next_char();
 				if (peek == '=') {
@@ -1369,7 +1325,7 @@ namespace xlang {
 				}
 			}
 				break;
-
+			
 			case '*' : {
 				peek = get_next_char();
 				if (peek == '=') {
@@ -1383,7 +1339,7 @@ namespace xlang {
 				}
 			}
 				break;
-
+			
 			case '/' : {
 				peek = get_next_char();
 				if (peek == '=') {
@@ -1397,7 +1353,7 @@ namespace xlang {
 				}
 			}
 				break;
-
+			
 			case '%' : {
 				peek = get_next_char();
 				if (peek == '=') {
@@ -1411,7 +1367,7 @@ namespace xlang {
 				}
 			}
 				break;
-
+			
 			case '&' : {
 				peek = get_next_char();
 				if (peek == '=') {
@@ -1429,7 +1385,7 @@ namespace xlang {
 				}
 			}
 				break;
-
+			
 			case '|' : {
 				peek = get_next_char();
 				if (peek == '=') {
@@ -1447,7 +1403,7 @@ namespace xlang {
 				}
 			}
 				break;
-
+			
 			case '!' : {
 				peek = get_next_char();
 				if (peek == '=') {
@@ -1461,13 +1417,13 @@ namespace xlang {
 				}
 			}
 				break;
-
+			
 			case '~' : {
 				col++;
 				return make_token("~", BIT_COMPL);
 			}
 				break;
-
+			
 			case '<' : {
 				peek = get_next_char();
 				if (peek == '=') {
@@ -1493,7 +1449,7 @@ namespace xlang {
 				}
 			}
 				break;
-
+			
 			case '>' : {
 				peek = get_next_char();
 				if (peek == '=') {
@@ -1519,7 +1475,7 @@ namespace xlang {
 				}
 			}
 				break;
-
+			
 			case '^' : {
 				peek = get_next_char();
 				if (peek == '=') {
@@ -1533,7 +1489,7 @@ namespace xlang {
 				}
 			}
 				break;
-
+			
 			case '=' : {
 				peek = get_next_char();
 				if (peek == '=') {
@@ -1547,7 +1503,7 @@ namespace xlang {
 				}
 			}
 				break;
-
+			
 			default : {
 				if (is_eof(ch)) {
 					tok.number = END_OF_FILE;
@@ -1558,10 +1514,10 @@ namespace xlang {
 			}
 				break;
 		}
-
+		
 		return tok;
 	}
-
+	
 	void lexer::print_processed_tokens() {
 		std::stack<token> temp;
 		token tok;
@@ -1576,50 +1532,47 @@ namespace xlang {
 			temp.pop();
 		}
 	}
-
-	/*
-	return token to parser for parsing
-	*/
-	token lexer::get_next_token() {
+	
+	// return token to parser for parsing
+	token lexer::get_next() {
+		
 		token tok;
 		tok.number = END_OF_FILE;
 		tok.loc.line = 0;
 		tok.loc.col = 0;
+		
 		char ch;
-
+		
 		if (this->is_lexing_done)
 			return tok;
-
+		
 		//first check tokens in a queue
 		if (!processed_tokens.empty()) {
 			tok = processed_tokens.front();
 			processed_tokens.pop();
 			return tok;
 		}
-
+		
 		loop_label:
 		switch (ch = get_next_char()) {
 			case '_':
 			case '$':
 			case 'a'...'z':
-			case 'A'...'Z':
-				unget_char();
+			case 'A'...'Z': unget_char();
 				tok = identifier();
 				break;
-
+			
 			case '0'...'9':
 			case '"':
-			case '\'':
-				unget_char();
+			case '\'': unget_char();
 				tok = literal();
 				error_flag = false;
 				break;
-
+			
 			case ' ':
-			case '\t':
-				col++;
+			case '\t': col++;
 				goto loop_label;
-
+			
 			case '+':
 			case '-':
 			case '*':
@@ -1631,11 +1584,10 @@ namespace xlang {
 			case '<':
 			case '>':
 			case '^':
-			case '=':
-				unget_char();
+			case '=': unget_char();
 				tok = operator_token();
 				break;
-
+			
 			case '/':
 				if (comment()) {
 					goto loop_label;
@@ -1645,81 +1597,70 @@ namespace xlang {
 					tok = operator_token();
 				}
 				break;
-
-			case '.':
-				col++;
+			
+			case '.': col++;
 				tok = make_token(".", DOT_OP);
 				break;
-
-			case ',':
-				col++;
+			
+			case ',': col++;
 				tok = make_token(",", COMMA_OP);
 				break;
-
-			case ':':
-				col++;
+			
+			case ':': col++;
 				tok = make_token(":", COLON_OP);
 				break;
-
-			case '{':
-				col++;
+			
+			case '{': col++;
 				tok = make_token("{", CURLY_OPEN_BRACKET);
 				break;
-
-			case '}':
-				col++;
+			
+			case '}': col++;
 				tok = make_token("}", CURLY_CLOSE_BRACKET);
 				break;
-
-			case '(':
-				col++;
+			
+			case '(': col++;
 				tok = make_token("(", PARENTH_OPEN);
 				break;
-
-			case ')':
-				col++;
+			
+			case ')': col++;
 				tok = make_token(")", PARENTH_CLOSE);
 				break;
-
-			case '[':
-				col++;
+			
+			case '[': col++;
 				tok = make_token("[", SQUARE_OPEN_BRACKET);
 				break;
-
-			case ']':
-				col++;
+			
+			case ']': col++;
 				tok = make_token("]", SQUARE_CLOSE_BRACKET);
 				break;
-
-			case ';':
-				col++;
+			
+			case ';': col++;
 				tok = make_token(";", SEMICOLON);
 				break;
-
-			case '\n':
-				line++;
+			
+			case '\n': line++;
 				col = 1;
 				goto loop_label;
-
+			
 			default:
 				if (is_eof(ch)) {
 					this->is_lexing_done = true;
 					return tok;
 				}
 				else {
-					log_error("invalid character", std::string(1, ch));
-
+					log::error("invalid character", std::string(1, ch));
+					
 				}
 				break;
 		}
 		return tok;
 	}
-
-	void lexer::unget_token(token &tok) {
+	
+	void lexer::put_back(token &tok) {
 		processed_tokens.push(tok);
 	}
-
-	void lexer::unget_token(token &tok, bool high_priority) {
+	
+	void lexer::put_back(token &tok, bool high_priority) {
 		token tok2;
 		if (!processed_tokens.empty()) {
 			if (high_priority) {
@@ -1733,7 +1674,7 @@ namespace xlang {
 			}
 		}
 	}
-
+	
 	void lexer::reverse_tokens_queue() {
 		std::stack<token> temp;
 		token tok;

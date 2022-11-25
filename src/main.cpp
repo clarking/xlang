@@ -5,321 +5,122 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-/*
-* main compiler driver program
-*/
+
+// main compiler driver program
 
 #include <iostream>
-#include <vector>
-#include <unistd.h>
-#include <sys/wait.h>
+#include <filesystem>
+#include "compiler.hpp"
 #include "log.hpp"
-#include "lex.hpp"
-#include "parser.hpp"
-#include "analyze.hpp"
-#include "x86_gen.hpp"
 
-xlang::tree_node *ast = nullptr;
-int log_level = 1;
-bool print_tree = false;
-bool print_symtab = false;
-bool print_record_symtab = false;
-bool use_cstdlib = true;
-bool omit_frame_pointer = false;
-bool compile_only = false;
-bool assemble_only = false;
-bool optimize = false;
-std::string asm_filename = "";
+using namespace xlang;
 
-int error_count = 0;
+const std::string VERSION = "0.0.1";
 
-bool check_error_count() {
-	if (error_count > 0) {
-		xlang::tree::delete_tree(&ast);
-		xlang::symtable::delete_node(&xlang::global_symtab);
-		xlang::symtable::delete_record_symtab(&xlang::record_table);
-		return false;
-	}
-	return true;
+static void version() {
+	log::line("xlang ", VERSION);
+	exit(0);
 }
 
-/*
-it checks for only specific string,
-if nothing found then set filename and returns it.
-*/
-std::string process_args(std::vector<std::string> &args) {
-	std::string file;
-	for (auto str: args) {
-		if (str == "--print-tree") {
-			print_tree = true;
+static void help() {
+	
+	std::vector<std::string> lines = {
+			"  usage: ./xlang [options] <file>",
+			"    -h  or --help (this message)",
+			"    -t  or --print-tree (print symbol table)",
+			"    -r  or --print-record-symtab (print record symnol table)",
+			"    -a  or --assemble (assemble only)",
+			"    -l  or --link     (link  only)",
+			"    -c  or --compile  (compile includes assembly and link passes)",
+			"    -o  or --optimize  (apply optimizations)",
+			"    -f  or --filename  (specity output filename)",
+			"    -no-stdlib (don't incude stdsib)",
+			"    -no-frameptr (omits frame pointer)",
+			"    -m32 (only applies for x86_64 hosts to output 32 bit code)",
+			"    -v  or --version (show version)"
+	};
+	
+	log::print_lines(lines);
+	exit(0);
+}
+
+void process_args(global_cfg &global, int argc, char **argv) {
+	
+	for (int i = 1; i < argc; ++i) {
+		std::string str = argv[i];
+		if (str == "--print-tree" || str == "-t") {
+			global.print_tree = true;
 		}
-		else if (str == "--print-symtab") {
-			print_symtab = true;
+		else if (str == "--print-symtab" || str == "-s") {
+			global.print_symtab = true;
 		}
-		else if (str == "--print-record-symtab") {
-			print_record_symtab = true;
+		else if (str == "--print-record-symtab" || str == "-r") {
+			global.print_record_symtab = true;
 		}
-		else if (str == "--no-cstdlib") {
-			use_cstdlib = false;
+		else if (str == "--compile" || str == "-c") {
+			global.compile = true;
 		}
-		else if (str == "--omit-frame-pointer") {
-			omit_frame_pointer = true;
+		else if (str == "--assemble" || str == "-a") {
+			global.assemble = true;
 		}
-		else if (str == "-S") {
-			compile_only = true;
+		else if (str == "--optimize" || str == "-o") {
+			global.optimize = true;
 		}
-		else if (str == "-c") {
-			assemble_only = true;
+		else if (str == "--link" || str == "-l") {
+			global.optimize = true;
 		}
-		else if (str == "-O1") {
-			optimize = true;
+		else if (str == "--no-stdlib") {
+			global.use_cstdlib = false;
+		}
+		else if (str == "--no-frameptr") {
+			global.omit_frame_pointer = true;
+		}
+		else if (str == "ak" || str == "--keep-asm-file") {
+			global.remove_asmfile = false;
+		}
+		else if (str == "ok" || str == "--keep-obj-file") {
+			global.remove_objfile = false;
+		}
+		else if (str == "-v" || str == "--version") {
+			version();
+		}
+		else if (str == "-m32") {
+			// TODO
+		}
+		else if (str == "-h" || str == "--help") {
+			help();
 		}
 		else {
-			file = str;
+			
+			std::filesystem::path path(str);
+			global.file.name = path.filename();
+			global.file.path = absolute(path);
+			
+			if (path.has_extension())
+				global.file.extension = path.extension();
+			
 		}
 	}
-	return file;
 }
 
-/*
-remove .x from end of filename
-and attach .asm as suffix
-*/
-std::string get_asm_filename(std::string filename) {
-	size_t fnd = filename.find_last_of('.');
-	if (fnd != std::string::npos) {
-		filename = filename.substr(0, fnd);
-	}
-	return filename + ".asm";
-}
-
-/*
-remove .x from end of filename
-and attach .asm as suffix
-*/
-std::string get_object_filename(std::string filename) {
-	size_t fnd = filename.find_last_of('.');
-	if (fnd != std::string::npos) {
-		filename = filename.substr(0, fnd);
-	}
-	return filename + ".o";
-}
-
-/*
-compile the program
-
-      -------------
-      |   lexer   |
-      -------------
-            |
-            |
-            *
-      --------------
-      |   parser   |
-      --------------
-            |
-            |
-            *
-   ----------------------
-   | semantic analyzer  |
-   ----------------------
-            |
-            |
-            *
-     ---------------
-     |  optimizer  |
-     ---------------
-            |
-            |
-            *
- -------------------------
- |  x86 code generation  |
- -------------------------
-
-*/
-bool compile(std::string filename) {
-	//create lex object with input filename
-	xlang::lex = new xlang::lexer(filename);
-
-	//create parser object
-	xlang::parser *p = new xlang::parser();
-	ast = p->parse();   //parse the whole program & get Abstract Syntax Tree(ast)
-
-	//check error count occured in parsing, otherwise halt
-	if (!check_error_count()) {
-		delete p;
-		delete xlang::lex;
-		return false;
-	}
-
-	//create sematic analyzer object
-	xlang::analyzer *an = new xlang::analyzer();
-	an->analyze(&ast);  //analyze whole program by traversing AST
-
-	//check error count from analyzer
-	if (!check_error_count()) {
-		delete an;
-		delete p;
-		delete xlang::lex;
-		return false;
-	}
-
-	//create x86 code generation object
-	xlang::x86_gen *x86 = new xlang::x86_gen;
-	x86->gen_x86_code(&ast);    //generate x86 assembly code from ast
-	// the code is written to file asm_filename
-
-//  if(xlang::error_count == 0){
-//    if(print_tree){
-//      std::cout<<"file: "<<filename<<std::endl;
-//      xlang::print::print_tree(ast, false);
-//    }
-//    if(print_symtab){
-//      std::cout<<"file: "<<filename<<std::endl;
-//      xlang::print::print_symtab(xlang::global_symtab);
-//    }
-//    if(print_record_symtab){
-//      std::cout<<"file: "<<filename<<std::endl;
-//      xlang::print::print_record_symtab(xlang::record_table);
-//    }
-//  }
-
-	xlang::tree::delete_tree(&ast);
-	xlang::symtable::delete_node(&xlang::global_symtab);
-	xlang::symtable::delete_record_symtab(&xlang::record_table);
-
-	delete x86;
-	delete an;
-	delete p;
-	delete xlang::lex;
-
-	return true;
-}
-
-/*
-assemble the assembly file by invoking NASM assembler
-*/
-void assemble(std::string filename) {
-	std::string assembler = "/usr/bin/nasm";
-	std::string options = "-felf32";
-	int status;
-	char *ps_argv[3];
-	ps_argv[0] = const_cast<char *>("nasm");
-	ps_argv[1] = const_cast<char *>(options.c_str());
-	ps_argv[2] = const_cast<char *>(asm_filename.c_str());
-	ps_argv[3] = 0;
-
-	pid_t pid = fork();
-
-	switch (pid) {
-		case -1:
-			std::cout << "fork() failed\n";
-			return;
-		case 0:
-			execvp(assembler.c_str(), ps_argv);
-			return;
-		default:
-			waitpid(pid, &status, 0);
-			if (status == 0) {
-				rename(get_object_filename(asm_filename).c_str(),
-				       get_object_filename(filename).c_str());
-			}
-	}
-}
-
-/*
-link the compiled and assembled object file with GCC.
-To link with LD, you need to insert some program starting
-instructions in x86 generation phase with _start() function
-*/
-void link(std::string objfilename) {
-	std::string link = "/usr/bin/gcc";
-	std::string option1 = "-m32";
-	std::string option2 = "-nostdlib";
-	std::string option3 = "-o";
-	std::string outputfile = "a.out";
-	int status;
-	char *ps_argv[6];
-
-	size_t fnd = objfilename.find_last_of('/');
-	if (fnd != std::string::npos) {
-		outputfile = objfilename.substr(0, fnd) + "/" + outputfile;
-	}
-
-	ps_argv[0] = const_cast<char *>("gcc");
-	ps_argv[1] = const_cast<char *>(option1.c_str());
-	ps_argv[2] = const_cast<char *>(objfilename.c_str());
-	ps_argv[3] = const_cast<char *>(option3.c_str());
-	ps_argv[4] = const_cast<char *>(outputfile.c_str());
-	ps_argv[5] = 0;
-
-	if (!use_cstdlib) {
-		ps_argv[1] = const_cast<char *>(option1.c_str());
-		ps_argv[2] = const_cast<char *>(option2.c_str());
-		ps_argv[3] = const_cast<char *>(objfilename.c_str());
-		ps_argv[4] = 0;
-	}
-
-	pid_t pid = fork();
-
-	switch (pid) {
-		case -1:
-			std::cout << "fork() failed\n";
-			return;
-		case 0:
-			execvp(link.c_str(), ps_argv);
-			return;
-		default:
-			waitpid(pid, &status, 0);
-	}
-}
+global_cfg compiler::global = global_cfg();
 
 int main(int argc, char **argv) {
-	std::vector<std::string> args;
-	std::string filename;
+	
 	if (argc < 2) {
-		xlang::log_error("No files provided");
+		log::error("No input file provided");
+		help();
 		return 0;
 	}
-	for (int i = 1; i < argc; ++i)
-		args.push_back(std::string(argv[i]));
-
-	filename = process_args(args);
-
-	if (filename.empty()) {
-		xlang::log_error("No files provided");
-		return 0;
-	}
+	
+	process_args(compiler::global, argc, argv);
+	if (compiler::global.file.name.empty())
+		log::error("No files provided");
 	else {
-		asm_filename = get_asm_filename(filename);
-
-		if (compile_only && !assemble_only) {
-			if (!compile(filename))
-				return 0;
-		}
-		else if (assemble_only && !compile_only) {
-			if (!compile(filename))
-				return 0;
-			assemble(asm_filename);
-			remove(asm_filename.c_str());
-		}
-		else if (assemble_only && compile_only) {
-			if (!compile(filename))
-				return 0;
-			assemble(asm_filename);
-		}
-		else {
-			if (!compile(filename))
-				return 0;
-			assemble(asm_filename);
-			link(get_object_filename(filename));
-			remove(asm_filename.c_str());
-			remove(get_object_filename(filename).c_str());
-		}
+		compiler comp;
+		if (comp.run())
+			return 0;
 	}
-
-	return 0;
+	
+	return 1;
 }
-
-
-
