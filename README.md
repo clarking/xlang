@@ -1,24 +1,13 @@
 
 # xlang
 
---------------------------------------------------------------------------------
 
-# What Is It?
+## What Is It?
 
-xlang is an high level language compiler based on Linux platform that emits 
-Netwide Assembler(NASM) x86 assembly. You can develop simple programs as well as 
-low-level applications such as writing OS components.
+xlang is an high level language based on Linux that emits Netwide Assembler(NASM) x86 assembly. 
+You can write from simple programs as well as low-level applications such as writing OS components.
 
-# What Can It Do?
-
-Through xlang, users can write programs according to the syntax of the language provided in 
-Grammar and produce Intel x86 assembly language.
-
-Simplifying the generated assembly by backend of the compiler that can be understand by anyone 
-who wants to learn NASM assembly language.The generated assembly contain comments having line numbers,
-variables used, local variables location on stack and their sizes, expressions etc.
-
-# Features
+## Features
 
 At present, xlang has a set of **core features** as below:
 
@@ -32,16 +21,16 @@ At present, xlang has a set of **core features** as below:
   - Support for importing C language functions.
   - Support for Abstract data types such as records.
 
-# Documentation
+## Documentation
 
 See **doc** directory for documentation, or see the manual with:
 
 ```bash
     $ man xlang
 ```
-# Installation and Uninstallation
+## Installation and Uninstallation
 
-#### Dependencies
+### Dependencies
 
  - GCC with C++11 compiler(g++)<br/>
  - Netwide Assembler(NASM)
@@ -57,7 +46,7 @@ You can build xlang using the following command sequence:
     $ cmake ..
     $ cmake --build .
 ```
-# How to Start
+## How to Start
 
 Create a file with .x file extension. Write a xlang program(see **doc** or **examples**).
 Compile the program and Run it.
