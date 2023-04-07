@@ -1,3 +1,4 @@
+
 record test{
   int x;
   char ch;

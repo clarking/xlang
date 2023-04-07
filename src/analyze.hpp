@@ -6,10 +6,7 @@
  */
 
 
-// data/operations used by class analyzer.
-
-#ifndef ANALYZE_H
-#define ANALYZE_H
+#pragma once
 
 #include <vector>
 #include <stack>
@@ -21,111 +18,109 @@
 
 namespace xlang {
 	
-	class analyzer {
-		public:
-		void analyze(tree_node **);
+	class Analyzer {
+    public:
+		void analyze(TreeNode **);
 		
-		private:
-		tree_node *parse_tree = nullptr;
-		st_node *func_symtab = nullptr;
-		st_func_info *func_info = nullptr;
-		std::stack<primary_expr_t *> prim_expr_stack;
-		
-		std::map<std::string, token> labels;
-		
+    private:
+		TreeNode *parse_tree = nullptr;
+
+		Node *func_symtab = nullptr;
+
+		FunctionInfo *func_info = nullptr;
+		std::stack<PrimaryExpression *> prim_expr_stack;
+		std::map<std::string, Token> labels;
 		int break_inloop = 0, continue_inloop = 0;
-		
-		std::list<token> goto_list; // for forward reference of labels
-		
-		primary_expr_t *factor_1 = nullptr, *factor_2 = nullptr, *primoprtr = nullptr;
+		std::list<Token> goto_list; // for forward reference of labels
+		PrimaryExpression *factor_1 = nullptr, *factor_2 = nullptr, *primoprtr = nullptr;
 		
 		static std::string boolean(bool b) {
 			return b ? "true" : "false";
 		}
 		
-		st_symbol_info *search_func_params(token);
+		SymbolInfo *search_func_params(Token);
 		
-		st_symbol_info *search_id(token);
+		SymbolInfo *search_id(Token);
 		
-		int tree_height(int, primary_expr_t *, id_expr_t *);
+		int tree_height(ExpressionType, PrimaryExpression *, IdentifierExpression *);
 		
-		void analyze_statement(stmt **);
+		void analyze_statement(Statement **);
 		
-		void analyze_expr(expr **);
+		void analyze_expr(Expression **);
 		
-		void analyze_primary_expr(primary_expr_t **);
+		void analyze_primary_expr(PrimaryExpression **);
 		
-		void analyze_id_expr(id_expr_t **);
+		void analyze_id_expr(IdentifierExpression **);
 		
-		void analyze_sizeof_expr(sizeof_expr_t **);
+		void analyze_sizeof_expr(SizeOfExpression **);
 		
-		void analyze_cast_expr(cast_expr_t **);
+		void analyze_cast_expr(CastExpression **);
 		
-		void analyze_funccall_expr(call_expr_t **);
+		void analyze_funccall_expr(CallExpression **);
 		
-		void analyze_assgn_expr(assgn_expr_t **);
+		void analyze_assgn_expr(AssignmentExpression **);
 		
-		void analyze_label_statement(labled_stmt **);
+		void analyze_label_statement(LabelStatement **);
 		
-		void analyze_selection_statement(select_stmt **);
+		void analyze_selection_statement(SelectStatement **);
 		
-		void analyze_iteration_statement(iter_stmt **);
+		void analyze_iteration_statement(IterationStatement **);
 		
-		void analyze_return_jmpstmt(jump_stmt **);
+		void analyze_return_jmpstmt(JumpStatement **);
 		
-		void analyze_jump_statement(jump_stmt **);
+		void analyze_jump_statement(JumpStatement **);
 		
 		void analyze_goto_jmpstmt();
 		
-		void analyze_func_param_info(st_func_info **);
+		void analyze_func_param_info(FunctionInfo **);
 		
-		void analyze_asm_template(asm_stmt **);
+		void analyze_asm_template(AsmStatement **);
 		
-		void analyze_asm_output_operand(st_asm_operand **);
+		void analyze_asm_output_operand(AsmOperand **);
 		
-		void analyze_asm_input_operand(st_asm_operand **);
+		void analyze_asm_input_operand(AsmOperand **);
 		
-		void analyze_asm_operand_expr(expr **);
+		void analyze_asm_operand_expr(Expression **);
 		
-		void analyze_asm_statement(asm_stmt **);
+		void analyze_asm_statement(AsmStatement **);
 		
-		void analyze_global_assignment(tree_node **);
+		void analyze_global_assignment(TreeNode **);
 		
-		void analyze_func_params(st_func_info *);
+		void analyze_func_params(FunctionInfo *);
 		
-		void analyze_local_declaration(tree_node **);
+		void analyze_local_declaration(TreeNode **);
 		
-		void check_invalid_type_declaration(st_node *);
+		void check_invalid_type_declaration(Node *);
 		
-		bool check_pointer_arithmetic(primary_expr_t *, primary_expr_t *, primary_expr_t *);
+		bool check_pointer_arithmetic(PrimaryExpression *, PrimaryExpression *, PrimaryExpression *);
 		
-		bool check_primexp_type_argument(primary_expr_t *, primary_expr_t *, primary_expr_t *);
+		bool check_primexp_type_argument(PrimaryExpression *, PrimaryExpression *, PrimaryExpression *);
 		
-		bool check_unary_primexp_type_argument(primary_expr_t *);
+		bool check_unary_primexp_type_argument(PrimaryExpression *);
 		
-		bool check_array_subscript(id_expr_t *);
+		bool check_array_subscript(IdentifierExpression *);
 		
-		bool check_unary_idexp_type_argument(id_expr_t *);
+		bool check_unary_idexp_type_argument(IdentifierExpression *);
 		
-		bool check_assignment_type_argument(assgn_expr_t *, int, id_expr_t *, primary_expr_t *);
+		bool check_assignment_type_argument(AssignmentExpression *, ExpressionType, IdentifierExpression *, PrimaryExpression *);
 		
-		void get_idexpr_idinfo(id_expr_t *, st_symbol_info **);
+		void get_idexpr_idinfo(IdentifierExpression *, SymbolInfo **);
 		
-		id_expr_t *get_idexpr_attrbute_node(id_expr_t **);
+		IdentifierExpression *get_idexpr_attrbute_node(IdentifierExpression **);
 		
-		id_expr_t *get_assgnexpr_idexpr_attribute(id_expr_t *);
+		IdentifierExpression *get_assgnexpr_idexpr_attribute(IdentifierExpression *);
 		
 		std::string get_template_token(std::string);
 		
-		std::vector<int> get_asm_template_tokens_vector(token);
+		std::vector<int> get_asm_template_tokens_vector(Token);
 		
 		bool is_digit(char);
 		
-		void simplify_assgn_primary_expr(assgn_expr_t **);
+		void simplify_assgn_primary_expr(AssignmentExpression **);
 		
-		bool has_constant_member(primary_expr_t *);
+		bool has_constant_member(PrimaryExpression *);
 		
-		bool has_constant_array_subscript(id_expr_t *);
+		bool has_constant_array_subscript(IdentifierExpression *);
 		
 		template<typename type>
 		void clear_stack(std::stack<type> &stk) {
@@ -134,7 +129,3 @@ namespace xlang {
 		}
 	};
 }
-
-#endif
-
-

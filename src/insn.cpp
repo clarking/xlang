@@ -9,52 +9,52 @@
 
 namespace xlang {
 	
-	operand *insn_class::get_operand_mem() {
-		return new struct operand;
+	Operand *InstructionClass::get_operand_mem() {
+		return new struct Operand;
 	}
 	
-	text *insn_class::get_text_mem() {
-		return new struct text;
+	TextSection *InstructionClass::get_text_mem() {
+		return new TextSection();
 	}
 	
-	insn *insn_class::get_insn_mem() {
-		insn *innew = new insn();
+	Instruction *InstructionClass::get_insn_mem() {
+		Instruction *innew = new Instruction();
 		innew->operand_1 = get_operand_mem();
 		innew->operand_2 = get_operand_mem();
 		return innew;
 	}
 	
-	data *insn_class::get_data_mem() {
-		data *d = new data();
+	Member *InstructionClass::get_data_mem() {
+		Member *d = new Member();
 		d->is_array = false;
 		return d;
 	}
 	
-	resv *insn_class::get_resv_mem() {
-		resv *r = new resv;
+	ReserveSection *InstructionClass::get_resv_mem() {
+		ReserveSection *r = new ReserveSection;
 		r->is_record = false;
 		return r;
 	}
 	
-	void insn_class::delete_operand(operand **opr) {
+	void InstructionClass::delete_operand(Operand **opr) {
 		delete *opr;
 		*opr = nullptr;
 	}
 	
-	void insn_class::delete_insn(insn **in) {
+	void InstructionClass::delete_insn(Instruction **in) {
 		delete *in;
 		*in = nullptr;
 	}
 	
-	void insn_class::delete_data(data **d) {
+	void InstructionClass::delete_data(Member **d) {
 		delete *d;
 	}
 	
-	void insn_class::delete_resv(resv **r) {
+	void InstructionClass::delete_resv(ReserveSection **r) {
 		delete *r;
 	}
 	
-	void insn_class::delete_text(text **t) {
+	void InstructionClass::delete_text(TextSection **t) {
 		delete *t;
 	}
 }

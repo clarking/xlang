@@ -12,83 +12,83 @@
 namespace xlang {
 	
 	
-	void st_node::print() {
+	void Node::print() {
 		// TODO:: not implemented yet
 	}
 	
-	void st_record_symtab::print() {
+	void RecordSymtab::print() {
 		// TODO:: not implemented yet
 	}
 	
-	void labled_stmt::print() {
+	void LabelStatement::print() {
 		
-		log::line("------------ labled statement -----------------");
-		log::line("ptr : ", this);
-		log::line("label : ", label.string);
-		log::line("-----------------------------------------------");
+		Log::line("------------ labled statement -----------------");
+		Log::line("ptr : ", this);
+		Log::line("label : ", label.string);
+		Log::line("-----------------------------------------------");
 	}
 	
-	void id_expr_t::print() {
-		log::line("{\n");
-		log::line("  string : ", tok.string);
-		log::line("  is_oprtr : ", (is_oprtr ? "true" : "false"));
-		log::line("  is_id : ", (is_id ? "true" : "false"));
-		log::line("  id_info : ", id_info);
-		log::line("  is_subscript : ", (is_subscript ? "true" : "false"));
+	void IdentifierExpression::print() {
+		Log::line("{\n");
+		Log::line("  string : ", tok.string);
+		Log::line("  is_oprtr : ", (is_oprtr ? "true" : "false"));
+		Log::line("  is_id : ", (is_id ? "true" : "false"));
+		Log::line("  id_info : ", id_info);
+		Log::line("  is_subscript : ", (is_subscript ? "true" : "false"));
 		
 		for (const auto &it: subscript) {
-			log::line(" [", it.string, "]");
+			Log::line(" [", it.string, "]");
 		}
 		
-		log::line("");
-		log::line("  is_ptr : ", (is_ptr ? "true" : "false"));
-		log::line("  ptr_oprtr_count : ", ptr_oprtr_count);
-		log::line("  this : ", this);
-		log::line("  left : ", left);
-		log::line("  right : ", right);
-		log::line("  unary : ", unary);
-		log::line("}");
+		Log::line("");
+		Log::line("  is_ptr : ", (is_ptr ? "true" : "false"));
+		Log::line("  ptr_oprtr_count : ", ptr_oprtr_count);
+		Log::line("  this : ", this);
+		Log::line("  left : ", left);
+		Log::line("  right : ", right);
+		Log::line("  unary : ", unary);
+		Log::line("}");
 		//
 		//		left->print();
 		//		right->print();
 		//		unary->print();
 	}
 	
-	void sizeof_expr_t::print() {
+	void SizeOfExpression::print() {
 		//size_t i;
-		log::line("(sizeof expression : ", this, ")");
-		log::line("  is_simple_type : ", (is_simple_type));
-		log::line("  simple_type : ");
+		Log::line("(sizeof expression : ", this, ")");
+		Log::line("  is_simple_type : ", (is_simple_type));
+		Log::line("  simple_type : ");
 		for (const auto &st: simple_type) {
-			log::line(st.string, " ");
+			Log::line(st.string, " ");
 		}
-		log::line("");
-		log::line("  identifier : ", identifier.string);
-		log::line("  is_ptr : ", is_ptr);
-		log::line("  ptr_oprtr_count : ", ptr_oprtr_count);
+		Log::line("");
+		Log::line("  identifier : ", identifier.string);
+		Log::line("  is_ptr : ", is_ptr);
+		Log::line("  ptr_oprtr_count : ", ptr_oprtr_count);
 	}
 	
-	void cast_expr_t::print() {
+	void CastExpression::print() {
 		//size_t i;
-		log::line("(cast expression : ", this, ")");
-		log::line("  is_simple_type : ", (is_simple_type ? "true" : "false"));
-		log::line("  simple_type : ");
+		Log::line("(cast expression : ", this, ")");
+		Log::line("  is_simple_type : ", (is_simple_type ? "true" : "false"));
+		Log::line("  simple_type : ");
 		for (const auto &st: simple_type)
-			log::line(st.string, " ");
-		log::line("");
-		log::line("  identifier = ", identifier.string);
-		log::line("  ptr_oprtr_count = ", ptr_oprtr_count);
-		log::line("  target : ");
+			Log::line(st.string, " ");
+		Log::line("");
+		Log::line("  identifier = ", identifier.string);
+		Log::line("  ptr_oprtr_count = ", ptr_oprtr_count);
+		Log::line("  target : ");
 		target->print();
 	}
 	
-	void assgn_expr_t::print() {
-		log::line("(assgn expression : ", this, ")");
-		log::line("{\n");
-		log::line("  tok : ", tok.string);
-		log::line("  id_expr : ", id_expr);
-		log::line("  expression : ", expression);
-		log::line("}\n");
+	void AssignmentExpression::print() {
+		Log::line("(assgn expression : ", this, ")");
+		Log::line("{\n");
+		Log::line("  tok : ", tok.string);
+		Log::line("  id_expr : ", id_expr);
+		Log::line("  expression : ", expression);
+		Log::line("}\n");
 		if (id_expr == nullptr)
 			return;
 		if (expression == nullptr)
@@ -97,59 +97,59 @@ namespace xlang {
 		expression->print();
 	}
 	
-	void expr_stmt::print() {
-		log::line("------------ expression statement -----------------");
-		log::line("ptr : ", this);
-		log::line("expression : ", expression);
+	void ExpressionStatement::print() {
+		Log::line("------------ expression statement -----------------");
+		Log::line("ptr : ", this);
+		Log::line("expression : ", expression);
 		expression->print();
-		log::line("---------------------------------------------------");
+		Log::line("---------------------------------------------------");
 	}
 	
-	void primary_expr_t::print() {
-		log::line("{");
-		log::line("  string : ", tok.string);
-		log::line("  token : ", tok.number);
-		log::line("  is_oprtr : ", (is_oprtr ? "true" : "false"));
-		log::line("  oprtr_kind : ", oprtr_kind);
-		log::line("  is_id : ", (is_id));
-		log::line("  this : ", this);
-		log::line("  left : ", left);
-		log::line("  right : ", right);
-		log::line("  unary_node : ", unary_node);
-		log::line("}");
+	void PrimaryExpression::print() {
+		Log::line("{");
+		Log::line("  string : ", tok.string);
+		Log::line("  Token : ", tok.number);
+		Log::line("  is_oprtr : ", (is_oprtr ? "true" : "false"));
+		Log::line("  oprtr_kind : ", (uint8_t)oprtr_kind);
+		Log::line("  is_id : ", (is_id));
+		Log::line("  this : ", this);
+		Log::line("  left : ", left);
+		Log::line("  right : ", right);
+		Log::line("  unary_node : ", unary_node);
+		Log::line("}");
 	}
 	
-	void stmt::print() {
-		stmt *curr = this;
+	void Statement::print() {
+		Statement *curr = this;
 		while (curr != nullptr) {
-			log::line("||||||||||||||||||||||| statement ||||||||||||||||||||");
-			log::line("ptr : ", curr);
-			log::line("type : ", curr->type);
-			log::line("labled_statement : ", curr->labled_statement);
-			log::line("expression_statement : ", curr->expression_statement);
-			log::line("selection_statement : ", curr->selection_statement);
-			log::line("iteration_statement : ", curr->iteration_statement);
-			log::line("jump_statement : ", curr->jump_statement);
-			log::line("asm statement : ", curr->asm_statement);
-			log::line("p_next : ", curr->p_next);
-			log::line("p_prev : ", curr->p_prev);
+			Log::line("||||||||||||||||||||||| statement ||||||||||||||||||||");
+			Log::line("ptr : ", curr);
+			Log::line("type : ",(uint8_t) curr->type);
+			Log::line("labled_statement : ", curr->labled_statement);
+			Log::line("expression_statement : ", curr->expression_statement);
+			Log::line("selection_statement : ", curr->selection_statement);
+			Log::line("iteration_statement : ", curr->iteration_statement);
+			Log::line("jump_statement : ", curr->jump_statement);
+			Log::line("asm statement : ", curr->asm_statement);
+			Log::line("p_next : ", curr->p_next);
+			Log::line("p_prev : ", curr->p_prev);
 			switch (curr->type) {
-				case LABEL_STMT :
+				case StatementType::LABEL :
 					curr->labled_statement->print();
 					break;
-				case EXPR_STMT :
+				case StatementType::EXPR :
 					curr->expression_statement->print();
 					break;
-				case SELECT_STMT :
+				case StatementType::SELECT :
 					curr->selection_statement->print();
 					break;
-				case ITER_STMT :
+				case StatementType::ITER :
 					curr->iteration_statement->print();
 					break;
-				case JUMP_STMT :
+				case StatementType::JUMP :
 					curr->jump_statement->print();
 					break;
-				case ASM_STMT :
+				case StatementType::ASM :
 					curr->asm_statement->print();
 					break;
 				
@@ -157,147 +157,147 @@ namespace xlang {
 					break;
 			}
 			
-			log::line("||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+			Log::line("||||||||||||||||||||||||||||||||||||||||||||||||||||||");
 			curr = curr->p_next;
 		}
 	}
 	
-	void call_expr_t::print() {
-		log::line("(func call expression : ", this, ")");
-		log::line("{");
-		log::line("  function : ", function);
+	void CallExpression::print() {
+		Log::line("(func call expression : ", this, ")");
+		Log::line("{");
+		Log::line("  function : ", function);
 		for (auto &e: expression_list) {
 			e->print();
 		}
 		
-		log::line("}");
+		Log::line("}");
 		function->print();
 		for (auto &e: expression_list) {
 			e->print();
 		}
 	}
 	
-	void select_stmt::print() {
-		log::line("------------- selection statement -----------------");
-		log::line("ptr : ", this);
-		log::line("iftok : ", iftok.string);
-		log::line("elsetok : ", elsetok.string);
-		log::line("condition : ", condition);
-		log::line("if_statement : ", if_statement);
-		log::line("else_statement : ", else_statement);
+	void SelectStatement::print() {
+		Log::line("------------- selection statement -----------------");
+		Log::line("ptr : ", this);
+		Log::line("iftok : ", iftok.string);
+		Log::line("elsetok : ", elsetok.string);
+		Log::line("condition : ", condition);
+		Log::line("if_statement : ", if_statement);
+		Log::line("else_statement : ", else_statement);
 		condition->print();
 		if_statement->print();
 		else_statement->print();
-		log::line("---------------------------------------------------");
+		Log::line("---------------------------------------------------");
 	}
 	
-	void iter_stmt::print() {
-		log::line("------------ iteration statement -----------------");
-		log::line("ptr : ", this);
-		log::line("type : ", type);
+	void IterationStatement::print() {
+		Log::line("------------ iteration statement -----------------");
+		Log::line("ptr : ", this);
+		Log::line("type : ", (uint8_t)type);
 		switch (type) {
-			case WHILE_STMT :
-				log::line("whiletok : ", _while.whiletok.string);
-				log::line("condition : ", _while.condition);
-				log::line("statement : ", _while.statement);
+			case IterationType::WHILE :
+				Log::line("whiletok : ", _while.whiletok.string);
+				Log::line("condition : ", _while.condition);
+				Log::line("statement : ", _while.statement);
 				_while.condition->print();
 				_while.statement->print();
 				break;
-			case DOWHILE_STMT :
-				log::line("dotok : ", _dowhile.dotok.string);
-				log::line("whiletok : ", _dowhile.whiletok.string);
-				log::line("condition : ", _dowhile.condition);
-				log::line("statement : ", _dowhile.statement);
+			case IterationType::DOWHILE :
+				Log::line("dotok : ", _dowhile.dotok.string);
+				Log::line("whiletok : ", _dowhile.whiletok.string);
+				Log::line("condition : ", _dowhile.condition);
+				Log::line("statement : ", _dowhile.statement);
 				_dowhile.condition->print();
 				_dowhile.statement->print();
 				break;
-			case FOR_STMT :
-				log::line("fortok : ", _for.fortok.string);
-				log::line("init_expr : ", _for.init_expr);
-				log::line("condition : ", _for.condition);
-				log::line("update_expr : ", _for.update_expr);
-				log::line("statement : ", _for.statement);
+			case IterationType::FOR :
+				Log::line("fortok : ", _for.fortok.string);
+				Log::line("init_expr : ", _for.init_expr);
+				Log::line("condition : ", _for.condition);
+				Log::line("update_expr : ", _for.update_expr);
+				Log::line("statement : ", _for.statement);
 				_for.init_expr->print();
 				_for.condition->print();
 				_for.update_expr->print();
 				_for.statement->print();
 				break;
 		}
-		log::line("---------------------------------------------------");
+		Log::line("---------------------------------------------------");
 	}
 	
-	void expr::print() {
+	void Expression::print() {
 		
-		log::line("(expression : ", this, ")");
+		Log::line("(expression : ", this, ")");
 		switch (expr_kind) {
-			case PRIMARY_EXPR :
-				log::line("  [primary expression : ", primary_expr, "]");
+			case ExpressionType::PRIMARY_EXPR :
+				Log::line("  [primary expression : ", primary_expr, "]");
 				primary_expr->print();
 				break;
-			case ASSGN_EXPR :
-				log::line("  [assignment expression : ", assgn_expr, "]");
+			case ExpressionType::ASSGN_EXPR :
+				Log::line("  [assignment expression : ", assgn_expr, "]");
 				assgn_expr->print();
 				break;
-			case SIZEOF_EXPR :
-				log::line("  [sizeof expression : ", sizeof_expr, "]");
+			case ExpressionType::SIZEOF_EXPR :
+				Log::line("  [sizeof expression : ", sizeof_expr, "]");
 				sizeof_expr->print();
 				break;
-			case CAST_EXPR :
-				log::line("  [cast expression : ", cast_expr, "]");
+			case ExpressionType::CAST_EXPR :
+				Log::line("  [cast expression : ", cast_expr, "]");
 				cast_expr->print();
 				break;
-			case ID_EXPR :
-				log::line("  [id expression : ", id_expr, "]");
+			case ExpressionType::ID_EXPR :
+				Log::line("  [id expression : ", id_expr, "]");
 				id_expr->print();
 				break;
-			case FUNC_CALL_EXPR :
-				log::line("funccall expression : ", call_expr);
+			case ExpressionType::FUNC_CALL_EXPR :
+				Log::line("funccall expression : ", call_expr);
 				call_expr->print();
 				break;
 			default:
-				log::line("  [invalid expression to print]");
+				Log::line("  [invalid expression to print]");
 				break;
 		}
 	}
 	
-	void asm_stmt::print() {
-		std::vector<st_asm_operand *>::iterator it;
-		asm_stmt *temp = this;
+	void AsmStatement::print() {
+		std::vector<AsmOperand *>::iterator it;
+		AsmStatement *temp = this;
 		while (temp != nullptr) {
-			log::line("--------------- asm statement ------------------");
-			log::line("ptr : ", temp);
-			log::line("p_next : ", temp->p_next);
-			log::line("template : ", temp->asm_template.string);
-			log::line("~~~~~~~~~ output operand ~~~~~~~~~~");
+			Log::line("--------------- asm statement ------------------");
+			Log::line("ptr : ", temp);
+			Log::line("p_next : ", temp->p_next);
+			Log::line("template : ", temp->asm_template.string);
+			Log::line("~~~~~~~~~ output Operand ~~~~~~~~~~");
 			for (const auto &t: temp->output_operand) {
 				t->print();
 			}
-			log::line("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-			log::line("~~~~~~~~~ input operand ~~~~~~~~~~");
+			Log::line("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+			Log::line("~~~~~~~~~ input Operand ~~~~~~~~~~");
 			it = temp->input_operand.begin();
 			for (const auto &t: temp->input_operand) {
 				t->print();
 			}
-			log::line("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-			log::line("------------------------------------------------");
+			Log::line("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+			Log::line("------------------------------------------------");
 			temp = temp->p_next;
 		}
 	}
 	
-	void jump_stmt::print() {
-		log::line("------------ jump statement -----------------");
-		log::line("ptr : ", this);
-		log::line("type : ", type);
-		log::line("tok : ", tok.string);
-		log::line("expression : ", expression);
-		log::line("goto_id : ", goto_id.string);
+	void JumpStatement::print() {
+		Log::line("------------ jump statement -----------------");
+		Log::line("ptr : ", this);
+		Log::line("type : ", (uint8_t)type);
+		Log::line("tok : ", tok.string);
+		Log::line("expression : ", expression);
+		Log::line("goto_id : ", goto_id.string);
 		expression->print();
-		log::line("-----------------------------------------------");
+		Log::line("-----------------------------------------------");
 	}
 	
-	void st_asm_operand::print() {
-		log::line("constraint : ", constraint.string);
-		log::line("expression : ", expression);
+	void AsmOperand::print() {
+		Log::line("constraint : ", constraint.string);
+		Log::line("expression : ", expression);
 		expression->print();
 	}
 }

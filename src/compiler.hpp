@@ -12,37 +12,44 @@
 #include "parser.hpp"
 #include "analyze.hpp"
 #include "gen.hpp"
+#include "types.hpp"
+
+#include <string>
 
 namespace xlang {
 
 	// this class tries to hold everything to keep a somewhat organized mess
 	
-	typedef std::map<std::string, st_func_info *> function_map;
-	
-	class compiler {
-		public:
+	class Compiler {
+	public:
 		
-		~compiler()=default;
+		~Compiler()=default;
 		
-		static global_cfg global;
+		static GlobalConfig global;
 		
-		static xlang::lexer *lex;
-		static xlang::parser *parser;
-		static analyzer *an;
-		static gen *generator;
-		static tree_node *ast;
-		static st_node *symtab;
-		static st_record_symtab *record_table;
-		static function_map *func_table;
+		static Lexer *lex;
+		static Parser *parser;
+		static Analyzer *an;
+		static CodeGen *generator;
+		static TreeNode *ast;
+		static Node *symtab;
+		static RecordSymtab *record_table;
+		static FunctionMap *func_table;
 		
-		static bool run();
+        static RecordNode *last_rec_node;
+	    static SymbolInfo *last_symbol;
+
+		static int run();
 		
-		static void assemble();
+		static bool assemble();
 		
-		static void link();
+		static bool link();
 		
 		static bool compile();
 		
 		static bool error_count();
+
+		static bool execute(std::string cmd);
+		
 	};
 }

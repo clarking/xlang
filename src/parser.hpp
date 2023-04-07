@@ -5,9 +5,6 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-
-// data/operations used by class parser.
-
 #pragma once
 
 #include <vector>
@@ -19,32 +16,49 @@
 
 namespace xlang {
 	
-	typedef std::vector<token_t> terminator_t;
+	typedef std::vector<TokenId> terminator_t;
 	
-	class parser {
+	class Parser {
 		public:
 		
-		parser();
+		Parser();
 		
-		tree_node *parse();
+		TreeNode *parse();
 		
-		friend std::ostream &operator<<(std::ostream &, const std::vector<token> &);
+		friend std::ostream &operator<<(std::ostream &, const std::vector<Token> &);
 		
-		friend std::ostream &operator<<(std::ostream &, const std::list<token> &);
+		friend std::ostream &operator<<(std::ostream &, const std::list<Token> &);
 		
 		private:
 		
-		bool is_expr_terminator_got = false;
-		bool is_expr_terminator_consumed = false;
-		int ptr_oprtr_count = 0;
+		bool is_expr_terminator_got{false};
+		bool is_expr_terminator_consumed{false};
+		int ptr_oprtr_count{0};
 		
-		token funcname;
-		token consumed_terminator;
-		token nulltoken;
-		
-		std::map<token_t, std::string> token_lexeme_table;
-		std::stack<token> parenth_stack;
-		std::vector<token> expr_list;
+		Token funcname;
+		Token consumed_terminator;
+		Token nulltoken;
+
+		std::stack<Token> parenth_stack;
+		std::vector<Token> expr_list;
+
+        //token_lexeme_table used for string of special symbols
+		std::map<TokenId, std::string> token_lexeme_table = {
+            {PTR_OP,        "*"},
+            {LOG_NOT,       "!"},
+		    {ADDROF_OP,     "&"},
+		    {ARROW_OP,      "->"},
+		    {DOT_OP,        "."},
+		    {COMMA_OP,      ","},
+		    {COLON_OP,      ":"},
+		    {CURLY_OPEN,    "{"},
+		    {CURLY_CLOSE,   "}"},
+		    {PARENTH_OPEN,  "("},
+		    {PARENTH_CLOSE, ")"},
+		    {SQUARE_OPEN,   "["},
+		    {SQUARE_CLOSE,  "]"},
+		    {SEMICOLON,     ";"}
+        };
 		
 		std::string s_quotestring(std::string str) {
 			return "'" + str + "'";
@@ -54,29 +68,29 @@ namespace xlang {
 			return "\"" + str + "\"";
 		}
 		
-		bool peek_token(token_t);
+		bool peek_token(TokenId);
 		
 		bool peek_token(const char *format...);
 		
-		bool peek_token(std::vector<token_t> &);
+		bool peek_token(std::vector<TokenId> &);
 		
-		bool peek_nth_token(token_t, int);
+		bool peek_nth_token(TokenId, int);
 		
-		token_t get_peek_token();
+		TokenId get_peek_token();
 		
-		token_t get_nth_token(int);
+		TokenId get_nth_token(int);
 		
-		bool expr_literal(token_t);
+		bool expr_literal(TokenId);
 		
 		bool peek_expr_literal();
 		
-		bool expect(token_t);
+		bool expect(TokenId);
 		
-		bool expect(token_t, bool);
+		bool expect(TokenId, bool);
 		
-		bool expect(token_t, bool, std::string);
+		bool expect(TokenId, bool, std::string);
 		
-		bool expect(token_t, bool, std::string, std::string);
+		bool expect(TokenId, bool, std::string, std::string);
 		
 		bool expect(const char *format...);
 		
@@ -92,23 +106,23 @@ namespace xlang {
 		
 		bool check_parenth();
 		
-		bool matches_terminator(terminator_t &, token_t);
+		bool matches_terminator(terminator_t &, TokenId);
 		
 		std::string get_terminator(terminator_t &);
 		
-		bool unary_operator(token_t);
+		bool unary_operator(TokenId);
 		
-		bool binary_operator(token_t);
+		bool binary_operator(TokenId);
 		
-		bool arithmetic_operator(token_t);
+		bool arithmetic_operator(TokenId);
 		
-		bool logical_operator(token_t);
+		bool logical_operator(TokenId);
 		
-		bool comparison_operator(token_t);
+		bool comparison_operator(TokenId);
 		
-		bool bitwise_operator(token_t);
+		bool bitwise_operator(TokenId);
 		
-		bool assignment_operator(token_t);
+		bool assignment_operator(TokenId);
 		
 		bool peek_binary_operator();
 		
@@ -118,11 +132,11 @@ namespace xlang {
 		
 		bool peek_unary_operator();
 		
-		bool integer_literal(token_t);
+		bool integer_literal(TokenId);
 		
-		bool character_literal(token_t);
+		bool character_literal(TokenId);
 		
-		bool constant_expr(token_t);
+		bool constant_expr(TokenId);
 		
 		bool peek_constant_expr();
 		
@@ -130,23 +144,23 @@ namespace xlang {
 		
 		bool expect_assignment_operator();
 		
-		bool expression_token(token_t);
+		bool expression_token(TokenId);
 		
 		bool peek_expr_token();
 		
-		expr *expression(terminator_t &);
+		Expression *expression(terminator_t &);
 		
 		void primary_expr(terminator_t &);
 		
 		void sub_primary_expr(terminator_t &);
 		
-		int precedence(token_t);
+		int precedence(TokenId);
 		
-		void postfix_expression(std::list<token> &);
+		void postfix_expression(std::list<Token> &);
 		
-		primary_expr_t *get_primary_expr_tree();
+		PrimaryExpression *get_primary_expr_tree();
 		
-		id_expr_t *get_id_expr_tree();
+		IdentifierExpression *get_id_expr_tree();
 		
 		bool peek_identifier();
 		
@@ -160,90 +174,88 @@ namespace xlang {
 		
 		int get_pointer_operator_sequence();
 		
-		//void incr_decr_expr(terminator_t &);
-		id_expr_t *prefix_incr_expr(terminator_t &);
+		IdentifierExpression *prefix_incr_expr(terminator_t &);
 		
 		void postfix_incr_expr(terminator_t &);
 		
-		id_expr_t *prefix_decr_expr(terminator_t &);
+		IdentifierExpression *prefix_decr_expr(terminator_t &);
 		
 		void postfix_decr_expr(terminator_t &);
 		
-		bool member_access_operator(token_t);
+		bool member_access_operator(TokenId);
 		
 		bool peek_member_access_operator();
 		
-		id_expr_t *address_of_expr(terminator_t &);
+		IdentifierExpression *address_of_expr(terminator_t &);
 		
-		bool peek_type_specifier(std::vector<token> &);
+		bool peek_type_specifier(std::vector<Token> &);
 		
-		bool type_specifier(token_t);
+		bool type_specifier(TokenId);
 		
 		bool peek_type_specifier();
 		
 		bool peek_type_specifier_from(int);
 		
-		void get_type_specifier(std::vector<token> &);
+		void get_type_specifier(std::vector<Token> &);
 		
-		sizeof_expr_t *sizeof_expr(terminator_t &);
+		SizeOfExpression *sizeof_expr(terminator_t &);
 		
-		cast_expr_t *cast_expr(terminator_t &);
+		CastExpression *cast_expr(terminator_t &);
 		
-		void cast_type_specifier(cast_expr_t **);
+		void cast_type_specifier(CastExpression **);
 		
-		assgn_expr_t *assignment_expr(terminator_t &, bool);
+		AssignmentExpression *assignment_expr(terminator_t &, bool);
 		
-		call_expr_t *call_expr(terminator_t &);
+		CallExpression *call_expr(terminator_t &);
 		
-		void func_call_expr_list(std::list<expr *> &, terminator_t &);
+		void func_call_expr_list(std::list<Expression *> &, terminator_t &);
 		
 		void record_specifier();
 		
-		bool record_head(token *, bool *, bool *);
+		bool record_head(Token *, bool *, bool *);
 		
-		void record_member_definition(st_record_node **);
+		void record_member_definition(RecordNode **);
 		
-		void rec_id_list(st_record_node **, st_type_info **);
+		void rec_id_list(RecordNode **, TypeInfo **);
 		
-		void rec_subscript_member(std::list<token> &);
+		void rec_subscript_member(std::list<Token> &);
 		
-		void rec_func_pointer_member(st_record_node **, int *, st_type_info **);
+		void rec_func_pointer_member(RecordNode **, int *, TypeInfo **);
 		
-		void rec_func_pointer_params(st_symbol_info **);
+		void rec_func_pointer_params(SymbolInfo **);
 		
-		void simple_declaration(token, std::vector<token> &, bool, st_node **);
+		void simple_declaration(Token, std::vector<Token> &, bool, Node **);
 		
-		void simple_declarator_list(st_node **, st_type_info **);
+		void simple_declarator_list(Node **, TypeInfo **);
 		
-		void subscript_declarator(st_symbol_info **);
+		void subscript_declarator(SymbolInfo **);
 		
-		void subscript_initializer(std::vector<std::vector<token>> &);
+		void subscript_initializer(std::vector<std::vector<Token>> &);
 		
-		void literal_list(std::vector<token> &);
+		void literal_list(std::vector<Token> &);
 		
-		void func_head(st_func_info **, token, token, std::vector<token> &, bool);
+		void func_head(FunctionInfo **, Token, Token, std::vector<Token> &, bool);
 		
-		void func_params(std::list<st_func_param_info *> &);
+		void func_params(std::list<FuncParamInfo *> &);
 		
-		labled_stmt *labled_statement();
+		LabelStatement *labled_statement();
 		
-		expr_stmt *expression_statement();
+		ExpressionStatement *expression_statement();
 		
-		select_stmt *selection_statement(st_node **);
+		SelectStatement *selection_statement(Node **);
 		
-		iter_stmt *iteration_statement(st_node **);
+		IterationStatement *iteration_statement(Node **);
 		
-		jump_stmt *jump_statement();
+		JumpStatement *jump_statement();
 		
-		stmt *statement(st_node **);
+		Statement *statement(Node **);
 		
-		asm_stmt *asm_statement();
+		AsmStatement *asm_statement();
 		
-		void asm_statement_sequence(asm_stmt **);
+		void asm_statement_sequence(AsmStatement **);
 		
-		void asm_operand(std::vector<st_asm_operand *> &);
+		void asm_operand(std::vector<AsmOperand *> &);
 		
-		void get_func_info(st_func_info **, token, int, std::vector<token> &, bool, bool);
+		void get_func_info(FunctionInfo **, Token, NodeType, std::vector<Token> &, bool, bool);
 	};
-	
 }

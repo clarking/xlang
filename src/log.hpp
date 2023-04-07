@@ -19,8 +19,8 @@ namespace xlang {
 	#define    LOG_VERBOSE  2
 	#define    LOG_ANNOYING 3
 	
-	class log {
-		public:
+	class Log {
+	public:
 		
 		template<typename ...Args>
 		static void error(Args &&...args) {
@@ -29,44 +29,45 @@ namespace xlang {
 		}
 		
 		template<typename ...Args>
-		static void error_at(loc_t loc, Args &&...args) {
+		static void error_at(TokenLocation loc, Args &&...args) {
 			//std::cout << cfg.file.name << ": [" << loc.line << ":" << loc.col << "] ";
 			// TODO: log file path and name here, absolute if possible
-			std::cout << ": [" << loc.line << ":" << loc.col << "] ";
+			std::cout << "[" << loc.line << ":" << loc.col << "] ";
 			(std::cout << ... << args);
+            std::cout << "\n";
 			exit(-1);
 		}
 		
 		template<typename ...Args>
 		static void info(Args &&...args) {
-			if (compiler::global.log_level != LOG_DISABLE) {
+			if (Compiler::global.log_level != LOG_DISABLE) {
 				(std::cout << ... << args);
 			}
 		}
 		
 		template<typename ...Args>
 		static void warn(Args &&...args) {
-			if (compiler::global.log_level != LOG_DISABLE) {
+			if (Compiler::global.log_level != LOG_DISABLE) {
 				(std::cout << ... << args);
 			}
 		}
 		
 		template<typename ...Args>
 		static void debug(Args &&...args) {
-			if (compiler::global.log_level != LOG_DISABLE) {
+			if (Compiler::global.log_level != LOG_DISABLE) {
 				(std::cout << ... << args);
 			}
 		}
 		
 		template<typename ...Args>
 		static void line(Args &&...args) {
-			if (compiler::global.log_level != LOG_DISABLE) {
+			if (Compiler::global.log_level != LOG_DISABLE) {
 				(std::cout << ... << args);
 				std::cout << '\n';
 			}
 		}
 		
-		static void print_tokens(std::vector<token> toks) {
+		static void print_tokens(std::vector<Token> toks) {
 			for (const auto &tok: toks) {
 				line(tok.string);
 			}

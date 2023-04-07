@@ -13,11 +13,14 @@
 
 namespace xlang {
 	
-	extern int get_decimal(token);
-	extern int convert_octal_to_decimal(std::string);
-	extern int convert_hex_to_decimal(std::string);
-	extern int convert_bin_to_decimal(std::string);
-	extern int convert_char_to_decimal(std::string);
-	extern std::string decimal_to_hex(unsigned int);
-	
+
+    class Convert {
+    public:
+	    static int tok_to_decimal(Token&);
+	    static int octal_to_decimal(std::string&);
+	    static int hex_to_decimal(std::string&);
+	    static int bin_to_decimal(std::string&);
+	    static int char_to_decimal(std::string&);
+	    static std::string dec_to_hex(unsigned int);
+    };
 }

@@ -1,7 +1,7 @@
 extern void printf(char*, int);
 
 char* string;
-string="HelloWorld\n";
+string="HelloXlang\n";
 
 int string_len()
 {

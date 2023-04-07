@@ -6,39 +6,37 @@
  */
 
 
-// Abstract Syntax Tree(AST) related functions
-
 #include <list>
 #include "tree.hpp"
 
 namespace xlang {
 	
-	sizeof_expr_t *tree::get_sizeof_expr_mem() {
-		sizeof_expr_t *newexpr = new sizeof_expr_t();
+	SizeOfExpression *Tree::get_sizeof_expr_mem() {
+		SizeOfExpression *newexpr = new SizeOfExpression();
 		return newexpr;
 	}
 	
-	void tree::delete_sizeof_expr(sizeof_expr_t **soexpr) {
+	void Tree::delete_sizeof_expr(SizeOfExpression **soexpr) {
 		if (*soexpr == nullptr)
 			return;
 		delete *soexpr;
 		*soexpr = nullptr;
 	}
 	
-	cast_expr_t *tree::get_cast_expr_mem() {
-		cast_expr_t *newexpr = new cast_expr_t();
+	CastExpression *Tree::get_cast_expr_mem() {
+		CastExpression *newexpr = new CastExpression();
 		return newexpr;
 	}
 	
-	void tree::delete_cast_expr(cast_expr_t **cexpr) {
+	void Tree::delete_cast_expr(CastExpression **cexpr) {
 		if (*cexpr == nullptr)
 			return;
 		delete *cexpr;
 		*cexpr = nullptr;
 	}
 	
-	primary_expr_t *tree::get_primary_expr_mem() {
-		primary_expr_t *newexpr = new primary_expr_t();
+	PrimaryExpression *Tree::get_primary_expr_mem() {
+		PrimaryExpression *newexpr = new PrimaryExpression();
 		newexpr->id_info = nullptr;
 		newexpr->left = nullptr;
 		newexpr->right = nullptr;
@@ -46,10 +44,11 @@ namespace xlang {
 		return newexpr;
 	}
 	
-	std::stack<primary_expr_t *> tree::pexpr_stack;
+	std::stack<PrimaryExpression *> Tree::pexpr_stack;
 	
-	void tree::get_inorder_primary_expr(primary_expr_t **pexpr) {
-		primary_expr_t *pexp = *pexpr;
+	void Tree::get_inorder_primary_expr(PrimaryExpression **pexpr) {
+
+		PrimaryExpression *pexp = *pexpr;
 		if (pexp == nullptr)
 			return;
 		
@@ -58,7 +57,7 @@ namespace xlang {
 		get_inorder_primary_expr(&pexp->right);
 	}
 	
-	void tree::delete_primary_expr(primary_expr_t **pexpr) {
+	void Tree::delete_primary_expr(PrimaryExpression **pexpr) {
 		if (*pexpr == nullptr)
 			return;
 		
@@ -73,8 +72,8 @@ namespace xlang {
 		}
 	}
 	
-	id_expr_t *tree::get_id_expr_mem() {
-		id_expr_t *newexpr = new id_expr_t();
+	IdentifierExpression *Tree::get_id_expr_mem() {
+		IdentifierExpression *newexpr = new IdentifierExpression();
 		newexpr->id_info = nullptr;
 		newexpr->left = nullptr;
 		newexpr->right = nullptr;
@@ -82,7 +81,7 @@ namespace xlang {
 		return newexpr;
 	}
 	
-	void tree::delete_id_expr(id_expr_t **idexpr) {
+	void Tree::delete_id_expr(IdentifierExpression **idexpr) {
 		if (*idexpr == nullptr)
 			return;
 		delete_id_expr(&((*idexpr)->left));
@@ -93,8 +92,8 @@ namespace xlang {
 		*idexpr = nullptr;
 	}
 	
-	expr *tree::get_expr_mem() {
-		expr *newexpr = new expr;
+	Expression *Tree::get_expr_mem() {
+		Expression *newexpr = new Expression;
 		newexpr->primary_expr = nullptr;
 		newexpr->sizeof_expr = nullptr;
 		newexpr->cast_expr = nullptr;
@@ -104,27 +103,27 @@ namespace xlang {
 		return newexpr;
 	}
 	
-	void tree::delete_expr(expr **exp) {
-		expr *exp2 = *exp;
+	void Tree::delete_expr(Expression **exp) {
+		Expression *exp2 = *exp;
 		if (*exp == nullptr)
 			return;
 		switch (exp2->expr_kind) {
-			case PRIMARY_EXPR :
+			case ExpressionType::PRIMARY_EXPR :
 				delete_primary_expr(&exp2->primary_expr);
 				break;
-			case ASSGN_EXPR :
+			case ExpressionType::ASSGN_EXPR :
 				delete_assgn_expr(&exp2->assgn_expr);
 				break;
-			case SIZEOF_EXPR :
+			case ExpressionType::SIZEOF_EXPR :
 				delete_sizeof_expr(&exp2->sizeof_expr);
 				break;
-			case CAST_EXPR :
+			case ExpressionType::CAST_EXPR :
 				delete_cast_expr(&exp2->cast_expr);
 				break;
-			case ID_EXPR :
+			case ExpressionType::ID_EXPR :
 				delete_id_expr(&exp2->id_expr);
 				break;
-			case FUNC_CALL_EXPR :
+			case ExpressionType::FUNC_CALL_EXPR :
 				delete_func_call_expr(&exp2->call_expr);
 				break;
 		}
@@ -132,14 +131,14 @@ namespace xlang {
 		*exp = nullptr;
 	}
 	
-	assgn_expr_t *tree::get_assgn_expr_mem() {
-		assgn_expr_t *newexpr = new assgn_expr_t();
+	AssignmentExpression *Tree::get_assgn_expr_mem() {
+		AssignmentExpression *newexpr = new AssignmentExpression();
 		newexpr->id_expr = nullptr;
 		newexpr->expression = nullptr;
 		return newexpr;
 	}
 	
-	void tree::delete_assgn_expr(assgn_expr_t **exp) {
+	void Tree::delete_assgn_expr(AssignmentExpression **exp) {
 		if (*exp == nullptr)
 			return;
 		delete_id_expr(&(*exp)->id_expr);
@@ -147,18 +146,18 @@ namespace xlang {
 		*exp = nullptr;
 	}
 	
-	call_expr_t *tree::get_func_call_expr_mem() {
-		call_expr_t *newexpr = new call_expr_t();
+	CallExpression *Tree::get_func_call_expr_mem() {
+		CallExpression *newexpr = new CallExpression();
 		newexpr->function = nullptr;
 		return newexpr;
 	}
 	
-	void tree::delete_func_call_expr(call_expr_t **exp) {
-		call_expr_t *exp2 = *exp;
+	void Tree::delete_func_call_expr(CallExpression **exp) {
+		CallExpression *exp2 = *exp;
 		if (exp2 == nullptr)
 			return;
 		delete_id_expr(&exp2->function);
-		std::list<expr *>::iterator lst = (exp2->expression_list).begin();
+		std::list<Expression *>::iterator lst = (exp2->expression_list).begin();
 		while (lst != (exp2->expression_list).end()) {
 			delete *lst;
 			lst++;
@@ -167,13 +166,13 @@ namespace xlang {
 		*exp = nullptr;
 	}
 	
-	st_asm_operand *tree::get_asm_operand_mem() {
-		st_asm_operand *asmop = new st_asm_operand();
+	AsmOperand *Tree::get_asm_operand_mem() {
+		AsmOperand *asmop = new AsmOperand();
 		asmop->expression = nullptr;
 		return asmop;
 	}
 	
-	void tree::delete_asm_operand(st_asm_operand **asmop) {
+	void Tree::delete_asm_operand(AsmOperand **asmop) {
 		if (*asmop == nullptr)
 			return;
 		delete_expr(&((*asmop)->expression));
@@ -181,27 +180,27 @@ namespace xlang {
 		*asmop = nullptr;
 	}
 	
-	labled_stmt *tree::get_label_stmt_mem() {
-		labled_stmt *newstmt = new labled_stmt();
+	LabelStatement *Tree::get_label_stmt_mem() {
+		LabelStatement *newstmt = new LabelStatement();
 		return newstmt;
 	}
 	
-	expr_stmt *tree::get_expr_stmt_mem() {
-		expr_stmt *newstmt = new expr_stmt();
+	ExpressionStatement *Tree::get_expr_stmt_mem() {
+		ExpressionStatement *newstmt = new ExpressionStatement();
 		newstmt->expression = nullptr;
 		return newstmt;
 	}
 	
-	select_stmt *tree::get_select_stmt_mem() {
-		select_stmt *newstmt = new select_stmt();
+	SelectStatement *Tree::get_select_stmt_mem() {
+		SelectStatement *newstmt = new SelectStatement();
 		newstmt->condition = nullptr;
 		newstmt->else_statement = nullptr;
 		newstmt->if_statement = nullptr;
 		return newstmt;
 	}
 	
-	iter_stmt *tree::get_iter_stmt_mem() {
-		iter_stmt *newstmt = new iter_stmt();
+	IterationStatement *Tree::get_iter_stmt_mem() {
+		IterationStatement *newstmt = new IterationStatement();
 		newstmt->_while.condition = nullptr;
 		newstmt->_while.statement = nullptr;
 		newstmt->_dowhile.condition = nullptr;
@@ -213,20 +212,20 @@ namespace xlang {
 		return newstmt;
 	}
 	
-	jump_stmt *tree::get_jump_stmt_mem() {
-		jump_stmt *newstmt = new jump_stmt();
+	JumpStatement *Tree::get_jump_stmt_mem() {
+		JumpStatement *newstmt = new JumpStatement();
 		newstmt->expression = nullptr;
 		return newstmt;
 	}
 	
-	asm_stmt *tree::get_asm_stmt_mem() {
-		asm_stmt *asmstmt = new asm_stmt;
+	AsmStatement *Tree::get_asm_stmt_mem() {
+		AsmStatement *asmstmt = new AsmStatement;
 		asmstmt->p_next = nullptr;
 		return asmstmt;
 	}
 	
-	stmt *tree::get_stmt_mem() {
-		stmt *newstmt = new stmt();
+	Statement *Tree::get_stmt_mem() {
+		Statement *newstmt = new Statement();
 		newstmt->labled_statement = nullptr;
 		newstmt->expression_statement = nullptr;
 		newstmt->selection_statement = nullptr;
@@ -238,25 +237,25 @@ namespace xlang {
 		return newstmt;
 	}
 	
-	tree_node *tree::get_tree_node_mem() {
-		tree_node *newtr = new tree_node();
-		newtr->symtab = symtable::get_node_mem();
+	TreeNode *Tree::get_tree_node_mem() {
+		TreeNode *newtr = new TreeNode();
+		newtr->symtab = SymbolTable::get_node_mem();
 		newtr->statement = nullptr;
 		newtr->p_next = nullptr;
 		newtr->p_prev = nullptr;
 		return newtr;
 	}
 	
-	void tree::delete_label_stmt(labled_stmt **lbstmt) {
+	void Tree::delete_label_stmt(LabelStatement **lbstmt) {
 		if (*lbstmt == nullptr)
 			return;
 		delete *lbstmt;
 		*lbstmt = nullptr;
 	}
 	
-	void tree::delete_asm_stmt(asm_stmt **asmstmt) {
-		std::vector<st_asm_operand *>::iterator it;
-		asm_stmt *temp = *asmstmt;
+	void Tree::delete_asm_stmt(AsmStatement **asmstmt) {
+		std::vector<AsmOperand *>::iterator it;
+		AsmStatement *temp = *asmstmt;
 		if (*asmstmt == nullptr)
 			return;
 		while (temp != nullptr) {
@@ -276,7 +275,7 @@ namespace xlang {
 		*asmstmt = nullptr;
 	}
 	
-	void tree::delete_expr_stmt(expr_stmt **expstmt) {
+	void Tree::delete_expr_stmt(ExpressionStatement **expstmt) {
 		if (*expstmt == nullptr)
 			return;
 		delete_expr(&((*expstmt)->expression));
@@ -284,7 +283,7 @@ namespace xlang {
 		*expstmt = nullptr;
 	}
 	
-	void tree::delete_select_stmt(select_stmt **selstmt) {
+	void Tree::delete_select_stmt(SelectStatement **selstmt) {
 		if (*selstmt == nullptr)
 			return;
 		delete_expr(&((*selstmt)->condition));
@@ -294,19 +293,19 @@ namespace xlang {
 		*selstmt = nullptr;
 	}
 	
-	void tree::delete_iter_stmt(iter_stmt **itstmt) {
+	void Tree::delete_iter_stmt(IterationStatement **itstmt) {
 		if (*itstmt == nullptr)
 			return;
 		switch ((*itstmt)->type) {
-			case WHILE_STMT :
+			case IterationType::WHILE :
 				delete_expr(&((*itstmt)->_while.condition));
 				delete_stmt(&((*itstmt)->_while.statement));
 				break;
-			case DOWHILE_STMT :
+			case IterationType::DOWHILE :
 				delete_expr(&((*itstmt)->_dowhile.condition));
 				delete_stmt(&((*itstmt)->_dowhile.statement));
 				break;
-			case FOR_STMT :
+			case IterationType::FOR :
 				delete_expr(&((*itstmt)->_for.init_expr));
 				delete_expr(&((*itstmt)->_for.condition));
 				delete_expr(&((*itstmt)->_for.update_expr));
@@ -317,7 +316,7 @@ namespace xlang {
 		*itstmt = nullptr;
 	}
 	
-	void tree::delete_jump_stmt(jump_stmt **jmpstmt) {
+	void Tree::delete_jump_stmt(JumpStatement **jmpstmt) {
 		if (*jmpstmt == nullptr)
 			return;
 		delete_expr(&((*jmpstmt)->expression));
@@ -325,9 +324,9 @@ namespace xlang {
 		*jmpstmt = nullptr;
 	}
 	
-	void tree::delete_stmt(stmt **stm) {
-		stmt *curr = *stm;
-		stmt *temp = nullptr;
+	void Tree::delete_stmt(Statement **stm) {
+		Statement *curr = *stm;
+		Statement *temp = nullptr;
 		if (*stm == nullptr)
 			return;
 		while (curr != nullptr) {
@@ -344,14 +343,14 @@ namespace xlang {
 		}
 	}
 	
-	void tree::delete_tree(tree_node **tr) {
-		tree_node *curr = *tr;
-		tree_node *temp = nullptr;
+	void Tree::delete_tree(TreeNode **tr) {
+		TreeNode *curr = *tr;
+		TreeNode *temp = nullptr;
 		while (curr != nullptr) {
 			temp = curr->p_next;
 			delete_stmt(&curr->statement);
 			if (curr->symtab != nullptr) {
-				symtable::delete_node(&curr->symtab);
+				SymbolTable::delete_node(&curr->symtab);
 			}
 			curr->p_prev = nullptr;
 			curr->p_next = nullptr;
@@ -360,7 +359,7 @@ namespace xlang {
 		}
 	}
 	
-	void tree::delete_tree_node(tree_node **trn) {
+	void Tree::delete_tree_node(TreeNode **trn) {
 		if (*trn == nullptr)
 			return;
 		delete_stmt(&((*trn)->statement));
@@ -370,8 +369,8 @@ namespace xlang {
 		*trn = nullptr;
 	}
 	
-	void tree::add_asm_statement(asm_stmt **ststart, asm_stmt **asmstmt) {
-		asm_stmt *temp = *ststart;
+	void Tree::add_asm_statement(AsmStatement **ststart, AsmStatement **asmstmt) {
+		AsmStatement *temp = *ststart;
 		
 		if (temp == nullptr) {
 			*ststart = *asmstmt;
@@ -385,8 +384,8 @@ namespace xlang {
 		
 	}
 	
-	void tree::add_statement(stmt **ststart, stmt **_stmt) {
-		stmt *temp = *ststart;
+	void Tree::add_statement(Statement **ststart, Statement **_stmt) {
+		Statement *temp = *ststart;
 		
 		if (temp == nullptr) {
 			*ststart = *_stmt;
@@ -401,8 +400,8 @@ namespace xlang {
 		
 	}
 	
-	void tree::add_tree_node(tree_node **trstart, tree_node **_trn) {
-		tree_node *temp = *trstart;
+	void Tree::add_tree_node(TreeNode **trstart, TreeNode **_trn) {
+		TreeNode *temp = *trstart;
 		
 		if (temp == nullptr) {
 			*trstart = *_trn;

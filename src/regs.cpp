@@ -18,7 +18,7 @@
 
 namespace xlang {
 	
-	std::pair<int, int> regs::size_indexes(int sz) {
+	std::pair<int, int> Registers::size_indexes(int sz) {
 		if (sz == 1) {
 			return std::pair<int, int>(0, 7);
 		} else if (sz == 2) {
@@ -29,33 +29,33 @@ namespace xlang {
 		return std::pair<int, int>(-1, -1);
 	}
 	
-	bool regs::search_register(regs_t rt) {
+	bool Registers::search_register(RegisterType rt) {
 		if (locked_registers.find(rt) == locked_registers.end())
 			return false;
 		return true;
 	}
 	
-	bool regs::search_fregister(fregs_t rt) {
+	bool Registers::search_fregister(FloatRegisterType rt) {
 		if (locked_fregisters.find(rt) == locked_fregisters.end())
 			return false;
 		return true;
 	}
 	
-	regs_t regs::allocate_register(int dsize) {
+	RegisterType Registers::allocate_register(int dsize) {
 		std::pair<int, int> index = size_indexes(dsize);
 		int reg;
 		for (reg = index.first; reg <= index.second; ++reg) {
 			//if gerister is found, then continue search
-			if (search_register(static_cast<regs_t>(reg))) {
+			if (search_register(static_cast<RegisterType>(reg))) {
 				continue;
 			} else {
-				//do not allow esp and ebp register for data manipulation instructions
+				//do not allow esp and ebp register for Member manipulation instructions
 				//because they are used for function parameters/local members stack frame
-				if (static_cast<regs_t>(reg) == ESP || static_cast<regs_t>(reg) == EBP) {
+				if (static_cast<RegisterType>(reg) == ESP || static_cast<RegisterType>(reg) == EBP) {
 					continue;
 				} else {
-					locked_registers.insert(static_cast<regs_t>(reg));
-					return static_cast<regs_t>(reg);
+					locked_registers.insert(static_cast<RegisterType>(reg));
+					return static_cast<RegisterType>(reg);
 				}
 			}
 		}
@@ -75,36 +75,36 @@ namespace xlang {
 		return regfunc(dsize);
 	}
 	
-	fregs_t regs::allocate_float_register() {
+	FloatRegisterType Registers::allocate_float_register() {
 		int reg;
 		for (reg = 0; reg <= 7; ++reg) {
-			if (search_fregister(static_cast<fregs_t>(reg))) {
+			if (search_fregister(static_cast<FloatRegisterType>(reg))) {
 				continue;
 			} else {
-				locked_fregisters.insert(static_cast<fregs_t>(reg));
-				return static_cast<fregs_t>(reg);
+				locked_fregisters.insert(static_cast<FloatRegisterType>(reg));
+				return static_cast<FloatRegisterType>(reg);
 			}
 		}
 		return FRNONE;
 	}
 	
-	void regs::free_register(regs_t rt) {
-		std::set<regs_t>::iterator it = locked_registers.find(rt);
+	void Registers::free_register(RegisterType rt) {
+		std::set<RegisterType>::iterator it = locked_registers.find(rt);
 		if (it != locked_registers.end())
 			locked_registers.erase(it);
 	}
 	
-	void regs::free_float_register(fregs_t rt) {
-		std::set<fregs_t>::iterator it = locked_fregisters.find(rt);
+	void Registers::free_float_register(FloatRegisterType rt) {
+		std::set<FloatRegisterType>::iterator it = locked_fregisters.find(rt);
 		if (it != locked_fregisters.end())
 			locked_fregisters.erase(it);
 	}
 	
-	void regs::free_all_registers() {
+	void Registers::free_all_registers() {
 		locked_registers.clear();
 	}
 	
-	void regs::free_all_float_registers() {
+	void Registers::free_all_float_registers() {
 		locked_fregisters.clear();
 	}
 	

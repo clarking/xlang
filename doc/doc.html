@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>xlang</title>
+
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Marck+Script&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="description" content="" />
+    <style>
+        body {
+            background-color: #AAAAAA;
+        }
+
+
+        .container {
+            padding: 5;
+
+            max-width: 800px;
+            margin: 0 auto;
+            margin-top: 15px;
+            border: 0;
+            border-radius: 5px;
+            background-color: #EEEEEE;
+        }
+
+        section {
+            margin: 0 auto;
+            padding: 0px 15px 0px 15px;
+
+        }
+
+        .header {
+            padding-top: 15px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 45px;
+            font-family: 'Marck Script', cursive;
+            color: #232323;
+            margin: 0 auto;
+        }
+
+        .footer {
+            font-size: 14px;
+            color: #666666;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        ul {
+            margin: 10px;
+        }
+
+        p {
+            margin-top: 5px;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1 class="logo">Xlang</h1>
+            <span class="">version-0.0.1</span>
+        </div>
+
+        <section>
+            <h2>Introduction</h2>
+            <hr />
+            <p>
+                Xlang is a high level, general purpose programming language that features a familiar 'C' like syntax, and compiles to assembly language.<br />
+                Some of the goals of Xlang are the following:
+            </p>
+
+            <h3>Features</h3>
+            At present, xlang has a set of **core features** as below:
+            <ul>
+                <li>Support for 8-bit, 16-bit and 32-bit registers.</li>
+                <li>Simple expression assembly generation.</li>
+                <li>Inline assembly.</li>
+                <li>Pointers and arrays.</li>
+                <li>Conditional statements such as if-else</li>
+                <li>Loops such as while, for and do-while.</li>
+                <li>Functions.</li>
+                <li>C functions imports.</li>
+                <li>Abstract data types.</li>
+            </ul>
+            <p>
+                Only ELF32 format is supported for compiling, assembling and linking the code. <br />
+                But users are free to assembly and link code in any format after compiling. <br />
+            </p>
+            <p>
+                The compiler is not the fully functional that supports all features provided as per grammar rules at final x86 code
+                generation.Compiler still lack of features such as abstract types such as records
+                handling, better support for pointers, double precision floating points, more than
+                one predicate handling in conditional as well as in loops. So these features can be
+                used using inline assembly.
+            </p>
+        </section>
+
+        <section>
+            <h2>Building</h2>
+            <hr />
+            <h3>Dependencies</h3>
+
+            <ul>
+                <li>GCC with C++11 compiler(g++)</li>
+                </li>Netwide Assembler(NASM)</li>
+                </li>CMake</li>
+            </ul>
+
+            <p>if all prerequisites are met, you can build Xlang by executing the cmake build, here's an example on how can be acomplished:</p>
+            <pre>
+            ```bash
+            $ git clone https://github.com/clarking/xlang.git
+            $ cd xlang
+            $ mkdir build && cd build
+            $ cmake ..
+            $ cmake --build .
+            ```
+        </pre>
+
+        </section>
+
+        <section>
+            <h2>Running</h2>
+            <hr />
+            <p>To compile and run a program we would need to invoke the xlang executable with the path of the file you want to compile,and the run it.</p>
+            <p>for example, to compile: ./xlang examples/string.x </br>
+
+            <p>for help on available options use '-h'.</p>
+
+            <h3>Example</h3>
+
+            <p>Here's a simple addition program that imports C printf() function.
+                Create a file named "hello_world.x" which reads as follow:</p>
+
+            <pre>
+            ```c
+            extern void printf(char*, int);
+
+            global void main()
+            {
+            int a, b, sum;
+            a = 10;
+            b = 20;
+
+            sum = a + b;
+
+            printf("sum: %d\n", sum);
+            }
+            ```
+        </pre>
+        </section>
+
+        <section>
+            <h2>Language</h2>
+            <hr />
+
+            <h3>Hello World</h3>
+
+            <pre>
+    extern void printf(char*);
+
+    global void main()
+    {
+        printf(“Hello World!”); // print hello world
+    }
+            </pre>
+
+            <p>*more examples are given in examples directory.</p>
+
+            <ul>
+                <li>Declaring function/variable as global prefix will make available to outside world.</li>
+                <li>Use exatern to access other globals from other files.</li>
+                <li> For using functions/variables in one file declare them as static or nothing any global/extern.</li>
+                <li>Variables must be declared before use in functions.</li>
+            </ul>
+
+            <p>*For more about syntax, see Appendix A.</p>
+
+            <h3>Variable Declaration</h3>
+
+            <p>Supported data types are void, char, double, float, int, short, long and record types. </p>
+            <pre>
+    e.g: int x, y;
+             </pre>
+
+            <h3>Selection statement</h3>
+
+            <pre>
+    e.g:
+    if (x < y) {
+        ...
+    }else{
+        ...
+        return;
+    }
+        </pre>
+
+            <p>*Supported condition operators are:</p>
+            <ul>
+                <li>
+                    << /li>
+                <li>></li>
+                <li>=
+                <li>,
+                <li>>=</li>
+                <li>==</li>
+                <li>!=</li>
+            </ul>
+
+            <h3>Loops</h3>
+            <p>Supports while loop, for loop and while loops with above condition operators.</p>
+            <pre>
+    e.g:
+    while(x > 0){
+        y++;
+    }
+        </pre>
+
+            <h3>Jump statement</h3>
+
+            <p>Supports 'goto', 'return' and 'break'</p>
+            <pre>
+    if(x < 10){
+        goto label;
+    }
+    else{
+        goto exit;
+    }
+            </pre>
+
+            <h3>Labels</h3>
+            <pre>
+    y = 10;
+    exit:
+    while(y >= 0){
+        if(x != 10) { break; }
+    }  
+            </pre>
+
+            <h3>Inline assembly</h3>
+
+            <pre>
+    asm{
+        “&lt;template&gt;” [ &lt;output-operand&gt; : &lt;input-operand&gt; ]
+    }
+            </pre>
+            <p>*see examples/inline_assembly.x for more info.</p>
+
+            <h3>Templates</h3>
+            <p>templates are considered any assembly instruction, output/input operands are replaced with each<br />
+                % or %n pattern in template.<br />
+
+            </p>
+
+            <h3>Input/Output operand</h3>
+            <p>it requires constraint as string in (“”). if has memory then its variable name, output operand constraint follows ‘=’ sign before any type of constraint.</p>
+
+            <h3>Constraint</h3>
+            <ul>
+                <li>
+                    <b>a</b> - eax
+                </li>
+                <li>
+                    <b>b</b> - ebx
+                </li>
+                <li>
+                    <b>c</b> - ecx
+                </li>
+                <li>
+                    <b>d</b> - edx
+                </li>
+                <li>
+                    <b>S</b> - esi
+                </li>
+                <li>
+                    <b>D</b> - edi
+                </li>
+                <li>
+                    <b>m</b> - memory
+                </li>
+                <li>
+                    <b>i</b> - immediate value
+                </li>
+                <li>
+                    <b>%</b> or <b>%n</b> where n = 0, 1, ...
+                </li>
+            </ul>
+            <pre>
+    e.g:
+    asm{
+        “mov eax, ebx”,
+        “mov %, %” [ “=a”() : “m”(x) ] // copy value of variable x into eax register
+    }
+        </pre>
+
+            <h3>Records</h3>
+
+            <p>An abstract types can be declared using records.<br />
+            <pre>
+            e.g:
+                record test
+                int x;
+                char ch;
+                float f;
+                double d;
+                test next;
+                int array[3][3];
+                }
+            </pre>
+
+            <h3>Factorial Example</h3>
+            <p> Here’s the factorial program from examples/fact.x</p>
+            <pre>
+    extern void scanf(char*, int);
+    extern void printf(char*, int);
+    
+    void print_string(char* str)
+    {
+        printf(str, 0);
+    }
+    
+    intfactorial(int num)
+    {
+        int fact;
+        fact = 1;
+        if(num <= 0){
+            return 1;
+        }
+        else{
+            while(num > 0){
+                fact = fact * num;
+                num--;
+            }
+        }
+        return fact;
+    }
+
+    global int main()
+    {
+        int x, fact;
+        print_string("Enter a number: ");
+        scanf("%d", &x);
+        fact = factorial(x);
+        printf("factorial %d\n", fact);
+    }
+
+    </pre>
+
+        </section>
+
+        <section>
+            <h2>Internals</h2>
+            <hr />
+            <p>
+                Everything has implemented by hand.No tools has been used.<br />
+                C++ programming language is used to write a compiler.<br />
+                A lexer that returns a token(consist of numeric value, lexeme, location) using lexical
+                grammar rules. A buffering technique is used for input of characters.(files: lexer.hpp
+                and lexer.cpp, token.hpp)<br />
+                For parsing, a hand written Recursive Descent Parser is used for parsing using
+                grammar rules that generate an Abstract Syntax Tree(AST) along with the Symbol
+                table.A Reverse Polish Notation technique is used to generate tree for primary
+                expressions.(files: parser.hpp, parser.cpp, tree.hpp, tree.cpp, symtab.hpp,
+                symtab.cpp)<br />
+                A static sematic analyzer takes this AST from parser, travese it and checks for
+                attribute errors(e.g. invalid types, undefined function-call etc.).(files: analyze.hpp,
+                analyze.cpp)<br />
+                An optimizer traverses AST and try to optimize it by reducing unused variables,
+                precomputing constant expressions etc.(files: optimize.hpp, optimize.cpp)<br />
+                An x86 code generation phase generate final NASM assembly code that is written
+                to a file(.asm), that then will be assembled with NASM and will be linked with GCC
+                to form final executable. Code generation uses the types of register supported by
+                intel x86 as well as instructions with their separate types.(files: x86_gen.hpp,
+                x86_gen.cpp, insn.hpp, insn.cpp, regs.hpp, regs.cpp)<br />
+            </p>
+        </section>
+
+
+        <section>
+            <h2>Grammar</h2>
+            <hr />
+
+
+            <h3>Keywords</h3>
+
+            <ul>
+                <li>asm</li>
+                <li>break</li>
+                <li>char</li>
+                <li>const</li>
+                <li>continue</li>
+                <li>do</li>
+                <li> double</li>
+                <li> else</li>
+                <li> extern</li>
+                <li> float</li>
+                <li>for</li>
+                <li> global</li>
+                <li> goto</li>
+                <li> if</li>
+                <li> int</li>
+                <li>long</li>
+                <li> record</li>
+                <li> return</li>
+                <li> short</li>
+                <li> sizeof</li>
+                <li>static</li>
+                <li> void</li>
+                <li> while</li>
+            </ul>
+
+
+            <h3>symbol</h3>
+            <p>! % ^ ~ & * ( ) - + = [ ] { } | : ; <> , . / \ ' " $</p>
+
+            <h3>literal</h3>
+            <p>integer-literal | float-literal | character-literal | string-literal</p>
+
+            <h3>integer-literal</h3>
+            <p> decimal-literal | octal-literal | hexadecimal-literal | binary-literal</p>
+
+            <h3> decimal-literal</h3>
+            <p> nonzero-digit | nonzero-digit sub-decimal-literal </p>
+
+            <h3>sub-decimal-literal</h3>
+            <p>digit | digit sub-decimal-literal</p>
+            <h3>octal-literal</h3>
+            <p>0 | 0 sub-octal-literal</p>
+
+            <h3>sub-octal-literal</h3>
+            <p>octal-digit | octal-digit sub-octal-literal</p>
+
+            <h3> hexadecimal-literal</h3>
+            <p> 0x sub-hexadecimal-literal | 0X sub-hexadecimal-literal</p>
+
+            <h3>sub-hexadecimal-literal</h3>
+            <p>hexadecimal-digit | hexadecimal-digit sub-hexadecimal-literal</p>
+
+            <h3>binary-literal</h3>
+            <p>0b sub-binary-literal | 0B sub-binary-literal</p>
+
+            <h3>sub-binary-literal</h3>
+            <p>( 0 | 1 ) | (0 | 1 | sub-binary-literal)</p>
+
+            <h3>digit</h3>
+            <p>0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9</p>
+
+            <h3>nonzero-digit</h3>
+            <p>1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9</p>
+
+            <h3>octal-digit</h3>
+            <p>0 | 1 | 2 | 3 | 4 | 5 | 6 | 7</p>
+
+            <h3>hexadecimal-digit</h3>
+            <p>0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | a | b | c | d | e | f | A | B | C | D | E | F</p>
+
+            <h3>float-literal</h3>
+            <p>digit-sequence . digit-sequence digit-sequence
+
+            <h3>digit-sequence</h3>
+            <p>digit | digit digit-sequence</p>
+
+            <h3>comment</h3>
+            <p>// any character except newline | / * any character * /
+
+            <h3>character-literal</h3>
+            <p>'c-char-sequence'</p>
+
+            <h3>c-char-sequence</h3>
+            <p>c-char | c-char c-char-sequence</p>
+
+            <h3>c-char</h3>
+            <p>any character except single quote, backslash and new line escape-sequence</p>
+
+            <h3>escape-sequence</h3>
+            <p>\' \" \? \\ \a \b \f \n \r \t \v \0</p>
+
+            <h3>string-literal</h3>
+            <p>"s-char-sequence"</p>
+
+            <h3>s-char-sequence</h3>
+            <p> s-char | s-char s-char-sequence</p>
+
+            <h3>s-char</h3>
+            <p>any character except double quote, backslash and new line | escape-sequence</p>
+
+            <h3>string-literal-sequence</h3>
+            <p>string-literal | string-literal , string-literal-sequence</p>
+
+            <h3>non-digit</h3>
+            <p>_ $ a b c d e f g h i j k l m n o p q r s t u v w x y z<br />
+                A B C D E F G H I J K L M N O P Q R S T U V W X Y Z</p>
+
+            <h3>identifier</h3>
+            <p>non-digit | non-digit sub-identifier
+
+            <h3>sub-identifier</h3>
+            <p>non-digit | digit | non-digit sub-identifier | digit sub-identifier</p>
+
+            <h3>token</h3>
+            <p>identifier | keyword | literal | assignment-operator | arithmetic-operator | comparison-operator | logical-operator | bitwise-operator | pointer-operator | address-of-operator | incr-operator | decr-operator | <br />
+                . | < | , | { | } | [ | ] | ( | ) | : | ;</p>
+
+                    <h3>expression</h3>
+                    <p>primary-expression | assignment-expression | sizeof-expression | cast-expression | id-expression | function-call-expression | </p>
+
+                    <h3>primary-expression</h3>
+                    <p>literal | identifier | ( primary-expression ) | ( primary-expression ) primary-expression | unary-operator primary-expression | literal binary-operator primary-expression | id-expression binary-operator primary-expression |
+                        sub-primary-expression</p>
+
+                    <h3>sub-primary-expression</h3>
+                    <p>binary-operator primary-expression</p>
+
+                    <h3>constant-expression</h3>
+                    <p>integer-literal | character-literal</p>
+
+                    <h3>assignment-expression</h3>
+
+                    id-expression assignment-operator expression<br />
+
+                    <h3>incr-decr-expression | prefix-incr-expression | postfix-incr-expression | prefix-decr-expression | postfix-decr-expression
+                        <h3>prefix-incr-expression</h3>
+                        <p>incr-operator id-expression</p>
+
+                        <h3>postfix-incr-expression</h3>
+                        <p>id-expression incr-operator</p>
+
+                        <h3>prefix-decr-expression</h3>
+                        <p>decr-operator id-expression</p>
+
+                        <h3>postfix-decr-expression</h3>
+                        <p> id-expression decr-operator</p>
+
+                        <h3>incr-operator</h3>
+                        <p>++</p>
+
+                        <h3>decr-operator</h3>
+                        <p>--</p>
+
+                        <h3>id-expression</h3>
+                        <p>identifier | identifier . id-expression |
+                            identifier -> id-expression |
+                            identifier subscript-id-access |
+                            pointer-indirection-access |
+                            incr-decr-expression |
+                            address-of-expression </p>
+
+                        <h3>subscript-id-access</h3>
+                        <p>[ identifier ] |
+                            [ constant-expression ] |
+                            [ id-expression ] subscript-id-access |
+                            [ constant-expression ] subscript-id-access |
+                            [ identifier ] . id-expression |
+                            [ constant-expression ] -> id-expression </p>
+
+                        <h3>pointer-indirection-access</h3>
+                        <p>pointer-operator-sequence id-expression</p>
+
+                        <h3>pointer-operator-sequence</h3>
+                        <p>pointer-operator | pointer-operator pointer-operator-sequence</p>
+
+                        <h3>pointer-operator</h3>
+                        <p>*</p>
+
+                        <h3>unary-operator</h3>
+                        <p>+ - ! ~</p>
+
+                        <h3>binary-operator :</h3>
+                        <p>arithmetic-operator |
+                            logical-operator |
+                            comparison-operator |
+                            bitwise-operator</p>
+
+                        <h3>arithmetic-operator</h3>
+                        <p>+ - * / %</p>
+
+                        <h3>logical-operator</h3>
+                        <p>&& ||</p>
+
+                        <h3>comparison-operator</h3>
+                        <p>
+                            < <=> >= == !=
+                        </p>
+
+                        <h3>bitwise-operator</h3>
+                        <p>| & ^ <<>> bit_and bit_or bit_xor</p>
+
+                        <h3>assignment-operator</h3>
+                        <p> > += -= *= /= %= |= &= ^= <<=>>= </p>
+
+                        <h3>address-of-expression</h3>
+
+                        <p> & id-expression</p>
+
+                        <h3>sizeof-expression</h3>
+
+                        <p>sizeof ( simple-type-specifier ) | sizeof ( identifier ) </p>
+
+                        <h3>cast-expression</h3>
+                        <p>( cast-type-specifier ) identifier</p>
+
+                        <h3>cast-type-specifier</h3>
+
+                        <p>simple-type-specifier | identifier | simple-type-specifier pointer-operator-sequence | identifier pointer-operator-sequence</p>
+
+                        <h3>function-call-expression</h3>
+                        <p>id-expression ( ) | id-expression ( func-call-expression-list )</p>
+
+                        <h3>func-call-expression-list</h3>
+
+                        <p>expression | expression , func-call-expression-list </p>
+
+                        <h3>type-specifier</h3>
+                        <p> simple-type-specifier | record-name</p>
+
+                        <h3>simple-type-specifier</h3>
+                        <p>void | < | char | double | float | int | short | long</p>
+
+                                <h3>record-specifier</h3>
+                                <p>record-head { record-member-definition }</p>
+
+                                <h3>record-head</h3>
+                                <p>global record record-name | record record-name</p>
+
+                                <h3>record-name</h3>
+                                <p> identifier</p>
+
+                                <br />
+        </section>
+
+
+    </div>
+</body>
+
+</html>

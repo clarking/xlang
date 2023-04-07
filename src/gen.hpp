@@ -6,8 +6,6 @@
  */
 
 
-// data/operations used in x86_gen.cpp file by class x86_gen.
-
 #pragma once
 
 #include <vector>
@@ -25,65 +23,69 @@
 
 namespace xlang {
 	
-	class gen {
-		public:
+	class CodeGen {
+    public:
 		
-		gen() : reg{new xlang::regs}, insncls{new xlang::insn_class} {}
-		~gen() {
+		CodeGen() : reg{new Registers}, insncls{new InstructionClass} {}
+
+		~CodeGen() {
+
 			for (auto x: data_section)
 				insncls->delete_data(&x);
+
 			for (auto x: resv_section)
 				insncls->delete_resv(&x);
+
 			for (auto x: text_section)
 				insncls->delete_text(&x);
+
 			for (auto x: instructions)
 				insncls->delete_insn(&x);
+
 			delete reg;
 			delete insncls;
 		}
 		
-		void get_code(tree_node **);
+		void get_code(TreeNode **);
 		
-		private:
+    private:
 		
-		xlang::regs *reg;
-		xlang::insn_class *insncls;
+		Registers *reg;
+		InstructionClass *insncls;
 		
-		st_node *func_symtab = nullptr;
-		st_func_info *func_params = nullptr;
+		Node *func_symtab = nullptr;
+		FunctionInfo *func_params = nullptr;
 		
 		size_t float_data_count = 1, string_data_count = 1;
 		size_t if_label_count = 1, else_label_count = 1, exit_if_count = 1;
 		size_t while_loop_count = 1, dowhile_loop_count = 1, for_loop_count = 1;
 		size_t exit_loop_label_count = 1;
 		
-		iter_stmt_t current_loop = WHILE_STMT;
+		IterationType current_loop = IterationType::WHILE;
 		std::stack<int> for_loop_stack, while_loop_stack, dowhile_loop_stack;
-		std::unordered_map<std::string, st_symbol_info *> initialized_data;
+		std::unordered_map<std::string, SymbolInfo *> initialized_data;
 		
-		//vectors for data, resv, text sections and instructions
-		std::vector<data *> data_section;
-		std::vector<resv *> resv_section;
-		std::vector<text *> text_section;
-		std::vector<insn *> instructions;
+		//vectors for data, bss, text sections and instructions
+		std::vector<Member *> data_section;
+		std::vector<ReserveSection *> resv_section;
+		std::vector<TextSection *> text_section;
+		std::vector<Instruction *> instructions;
 		
-		//function member, member type size and frame-pointer displacement(fp)
-		struct func_member {
-			int insize;
-			int fp_disp;
+		struct FunctionMember {
+			int insize;  // member type size 
+			int fp_disp; // frame-pointer displacement(fp)
 		};
 		
-		//total size of local members, and hash table for each member location
-		struct func_local_members {
+		struct LocalMembers {
 			size_t total_size;
-			std::unordered_map<std::string, func_member> members;
+			std::unordered_map<std::string, FunctionMember> members;
 		};
 		
-		//hash table for each function and its local members
-		std::unordered_map<std::string, func_local_members> func_members;
 		
-		using funcmem_iterator = std::unordered_map<std::string, func_local_members>::iterator;
-		using memb_iterator = std::unordered_map<std::string, func_member>::iterator;
+		std::unordered_map<std::string, LocalMembers> func_members;
+		
+		using funcmem_iterator = std::unordered_map<std::string, LocalMembers>::iterator;
+		using memb_iterator = std::unordered_map<std::string, FunctionMember>::iterator;
 		
 		template<typename type>
 		void clear_stack(std::stack<type> &stk) {
@@ -91,87 +93,87 @@ namespace xlang {
 				stk.pop();
 		}
 		
-		int data_type_size(token);
+		int data_type_size(Token);
 		
-		int data_decl_size(declspace_t);
+		int data_decl_size(DeclarationType);
 		
-		int resv_decl_size(resspace_t);
+		int resv_decl_size(ReservationType);
 		
-		declspace_t declspace_type_size(token);
+		DeclarationType declspace_type_size(Token);
 		
-		resspace_t resvspace_type_size(token);
+		ReservationType resvspace_type_size(Token);
 		
-		bool has_float(primary_expr_t *);
+		bool has_float(PrimaryExpression *);
 		
-		void max_datatype_size(primary_expr_t *, int *);
+		void max_datatype_size(PrimaryExpression *, int *);
 		
 		void get_func_local_members();
 		
-		st_symbol_info *search_func_params(std::string);
+		SymbolInfo *search_func_params(std::string);
 		
-		st_symbol_info *search_id(std::string);
+		SymbolInfo *search_id(std::string);
 		
-		insnsize_t get_insn_size_type(int);
+		InstructionSize get_insn_size_type(int);
 		
-		std::stack<primary_expr_t *> get_post_order_prim_expr(primary_expr_t *);
+		std::stack<PrimaryExpression *> get_post_order_prim_expr(PrimaryExpression *);
 		
-		insn_t get_arthm_op(std::string);
+		InstructionType get_arthm_op(std::string);
 		
-		insn_t get_farthm_op(std::string, bool);
+		InstructionType get_farthm_op(std::string, bool);
 		
-		insn *get_insn(insn_t instype, int oprcount);
+		Instruction *get_insn(InstructionType instype, int oprcount);
 		
 		void insert_comment(std::string);
 		
-		data *search_data(std::string);
+		Member *search_data(std::string);
 		
-		data *search_string_data(std::string);
+		Member *search_string_data(std::string);
 		
 		std::string hex_escape_sequence(char);
 		
 		std::string get_hex_string(std::string);
 		
-		bool get_function_local_member(func_member *, token);
+		bool get_function_local_member(FunctionMember *, Token);
 		
-		regs_t gen_int_primexp_single_assgn(primary_expr_t *, int);
+		RegisterType gen_int_primexp_single_assgn(PrimaryExpression *, int);
 		
-		bool gen_int_primexp_compl(primary_expr_t *, int);
+		bool gen_int_primexp_compl(PrimaryExpression *, int);
 		
-		data *create_string_data(std::string);
+		Member *create_string_data(std::string);
 		
-		regs_t gen_string_literal_primary_expr(primary_expr_t *);
+		RegisterType gen_string_literal_primary_expr(PrimaryExpression *);
 		
-		fregs_t gen_float_primexp_single_assgn(primary_expr_t *, declspace_t);
+		FloatRegisterType gen_float_primexp_single_assgn(PrimaryExpression *, DeclarationType);
 		
-		regs_t gen_int_primary_expr(primary_expr_t *);
+		RegisterType gen_int_primary_expr(PrimaryExpression *);
 		
-		data *create_float_data(declspace_t, std::string);
+		Member *create_float_data(DeclarationType, std::string);
 		
-		void gen_float_primary_expr(primary_expr_t *);
+		void gen_float_primary_expr(PrimaryExpression *);
 		
-		std::pair<int, int> gen_primary_expr(primary_expr_t **);
+		std::pair<int, int> gen_primary_expr(PrimaryExpression **);
 		
-		void gen_assgn_primary_expr(assgn_expr_t **);
+		void gen_assgn_primary_expr(AssignmentExpression **);
 		
-		void gen_sizeof_expr(sizeof_expr_t **);
+		void gen_sizeof_expr(SizeOfExpression **);
 		
-		void gen_assgn_sizeof_expr(assgn_expr_t **);
+		void gen_assgn_sizeof_expr(AssignmentExpression **);
 		
-		void gen_assgn_cast_expr(assgn_expr_t **);
+		void gen_assgn_cast_expr(AssignmentExpression **);
 		
-		void gen_id_expr(id_expr_t **);
+		void gen_id_expr(IdentifierExpression **);
 		
-		void gen_assgn_id_expr(assgn_expr_t **);
+		void gen_assgn_id_expr(AssignmentExpression **);
 		
-		void gen_assgn_funccall_expr(assgn_expr_t **);
+		void gen_assgn_funccall_expr(AssignmentExpression **);
 		
-		void gen_assignment_expr(assgn_expr_t **);
+		void gen_assignment_expr(AssignmentExpression **);
 		
-		void gen_funccall_expr(call_expr_t **);
+		void gen_funccall_expr(CallExpression **);
 		
-		void gen_cast_expr(cast_expr_t **);
+		void gen_cast_expr(CastExpression **);
 		
-		void gen_expr(expr **);
+		void gen_expr(Expression **);
 		
 		void save_frame_pointer();
 		
@@ -183,39 +185,39 @@ namespace xlang {
 		
 		void gen_uninitialized_data();
 		
-		void gen_array_init_declaration(st_node *);
+		void gen_array_init_declaration(Node *);
 		
-		void gen_global_declarations(tree_node **trnode);
+		void gen_global_declarations(TreeNode **trnode);
 		
-		void gen_label_statement(labled_stmt **);
+		void gen_label_statement(LabelStatement **);
 		
-		void gen_jump_statement(jump_stmt **);
+		void gen_jump_statement(JumpStatement **);
 		
-		regs_t get_reg_type_by_char(char);
+		RegisterType get_reg_type_by_char(char);
 		
-		std::string get_asm_output_operand(st_asm_operand **);
+		std::string get_asm_output_operand(AsmOperand **);
 		
-		std::string get_asm_input_operand(st_asm_operand **);
+		std::string get_asm_input_operand(AsmOperand **);
 		
 		void get_nonescaped_string(std::string &);
 		
-		void gen_asm_statement(asm_stmt **);
+		void gen_asm_statement(AsmStatement **);
 		
-		bool is_literal(token);
+		bool is_literal(Token);
 		
-		bool gen_float_type_condition(primary_expr_t **, primary_expr_t **, primary_expr_t **opr);
+		bool gen_float_type_condition(PrimaryExpression **, PrimaryExpression **, PrimaryExpression **opr);
 		
-		token_t gen_select_stmt_condition(expr *);
+		TokenId gen_select_stmt_condition(Expression *);
 		
-		void gen_selection_statement(select_stmt **);
+		void gen_selection_statement(SelectStatement **);
 		
-		void gen_iteration_statement(iter_stmt **);
+		void gen_iteration_statement(IterationStatement **);
 		
-		void gen_statement(stmt **);
+		void gen_statement(Statement **);
 		
-		void write_record_member_to_asm_file(record_data_type &, std::ofstream &);
+		void write_record_member_to_asm_file(RecordDataType &, std::ofstream &);
 		
-		void write_record_data_to_asm_file(resv **, std::ofstream &);
+		void write_record_data_to_asm_file(ReserveSection **, std::ofstream &);
 		
 		void write_data_to_asm_file(std::ofstream &);
 		
@@ -227,7 +229,7 @@ namespace xlang {
 		
 		void write_asm_file();
 		
-		bool search_text(text *);
+		bool search_text(TextSection *);
 		
 		void gen_record();
 		

@@ -5,8 +5,6 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-//  data/operations used by class lexer.
-
 #pragma once
 
 #include <iostream>
@@ -19,21 +17,18 @@
 
 namespace xlang {
 	
-	//buffer size used to read block from a file
-	#define BUFFER_SIZE 512
-	
-	class lexer {
-		
-		public:
-		lexer(src_file src) : file(src) {};
+	class Lexer {
+	public:
+
+		Lexer(SourceFile src) : file(src) {};
 		
 		void init();
 		
-		token get_next();
+		Token get_next();
 		
-		void put_back(token &);
+		void put_back(Token &);
 		
-		void put_back(token &, bool);
+		void put_back(Token &, bool);
 		
 		std::string get_filename();
 		
@@ -41,36 +36,38 @@ namespace xlang {
 		
 		void reverse_tokens_queue();
 		
-		private:
+    private:
 		
-		src_file file;
+		SourceFile file;
+		std::unordered_map<std::string, TokenId> key_tokens;
+		std::queue<Token> processed_tokens;
+
+		std::vector<char> symbols = {
+            ' ', '\t', '\n', '!', '%', '^', '~', '&', 
+            '*', '(', ')', '-', '+', '=', '[', ']', '{', 
+            '}', '|', ':', ';', '<', '>', ',', '.', '/', 
+            '\\', '\'', '"', '@', '`', '?'
+        };
+
+		std::string lexeme;
+		size_t buffer_index = 0;
+		unsigned line = 1;
+        unsigned col = 1;
+
+		bool unget_flag = false;
 		bool is_lexing_done = false;
+		bool eof_flag = false;
+		bool error_flag = false;
 		
 		bool is_eof(char);
 		
-		bool file_read(src_file &src);
+		bool file_read(SourceFile &src);
 		
 		bool file_exists(const std::string &path);
-		
-		char buffer[BUFFER_SIZE];
-		size_t buffer_index = 0;
 		
 		char get_next_char();
 		
 		void unget_char();
-		
-		bool unget_flag = false;
-		
-		int line = 1, col = 1;
-		
-		std::unordered_map<std::string, token_t> key_tokens;
-		std::vector<char> symbols = {' ', '\t', '\n', '!', '%', '^', '~', '&', '*', '(', ')', '-', '+', '=', '[', ']', '{', '}', '|', ':', ';', '<', '>', ',', '.', '/', '\\', '\'', '"', '@', '`', '?'};
-		
-		std::string lexeme;
-		
-		bool eof_flag = false;
-		
-		bool error_flag = false;
 		
 		void consume_chars_till(char);
 		
@@ -78,15 +75,12 @@ namespace xlang {
 		
 		void consume_chars_till_symbol();
 		
-		token make_token(token_t);
+		Token make_token(TokenId);
 		
-		token make_token(std::string, token_t);
+		Token make_token(std::string, TokenId);
 		
-		token operator_token();
+		Token operator_token();
 		
-		std::queue<token> processed_tokens;
-		
-		//lexer grammar
 		bool symbol(char);
 		
 		bool digit(char);
@@ -99,45 +93,42 @@ namespace xlang {
 		
 		bool non_digit(char);
 		
-		token identifier();
+		Token identifier();
 		
 		void sub_identifier();
 		
-		token literal();
+		Token literal();
 		
-		token integer_literal();
+		Token integer_literal();
 		
-		token float_literal();
+		Token float_literal();
 		
-		token character_literal();
+		Token character_literal();
 		
 		void c_char_sequence();
 		
-		token string_literal();
+		Token string_literal();
 		
 		void s_char_sequence();
 		
-		token decimal_literal();
+		Token decimal_literal();
 		
 		void sub_decimal_literal();
 		
-		token octal_literal();
+		Token octal_literal();
 		
 		void sub_octal_literal();
 		
-		token hexadecimal_literal();
+		Token hexadecimal_literal();
 		
 		void sub_hexadecimal_literal();
 		
-		token binary_literal();
+		Token binary_literal();
 		
 		void sub_binary_literal();
 		
 		void digit_sequence(std::string &);
 		
 		bool comment();
-		
 	};
-	
-	
 }
