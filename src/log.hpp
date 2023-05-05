@@ -26,6 +26,7 @@ namespace xlang {
 		static void error(Args &&...args) {
 			(std::cout << ... << args);
 			std::cout << '\n';
+			exit(-1);
 		}
 		
 		template<typename ...Args>

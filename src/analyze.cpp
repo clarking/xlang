@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019  Pritam Zope
- * Copyright (c) 2021, Aaron Clark Diaz.
+ * Copyright (c) 2023, Aaron Clark Diaz.
  *
  * SPDX-License-Identifier: GPL-2.0-only
  */
@@ -12,27 +12,27 @@
 #include "compiler.hpp"
 
 namespace xlang {
-	
+
 	SymbolInfo *Analyzer::search_func_params(Token tok) {
 
 		if (func_info == nullptr)
 			return nullptr;
-		
+
 		if (func_info->param_list.size() > 0) {
-			for (auto syminf: func_info->param_list) {
+			for (const auto &syminf: func_info->param_list) {
 				if (syminf->symbol_info != nullptr) {
 					if (syminf->symbol_info->symbol == tok.string)
 						return syminf->symbol_info;
 				}
 			}
 		}
+
 		return nullptr;
 	}
-	
+
 	SymbolInfo *Analyzer::search_id(Token tok) {
 
 		SymbolInfo *syminf = nullptr;
-
 		if (func_symtab != nullptr) {
 			syminf = SymbolTable::search_symbol_node(func_symtab, tok.string);
 			if (syminf == nullptr) {
@@ -43,80 +43,86 @@ namespace xlang {
 					syminf = SymbolTable::search_symbol_node(Compiler::symtab, tok.string);
 				}
 			}
-		} else 
+		}
+		else
 			//if function symbol table null, then search in global symbol table
 			syminf = SymbolTable::search_symbol_node(Compiler::symtab, tok.string);
-		
 		return syminf;
 	}
-	
-	void Analyzer::check_invalid_type_declaration(Node *symtab) {
 
-		unsigned i;
+	void Analyzer::check_invalid_type_declaration(Node *symtab) {
 
 		if (symtab == nullptr)
 			return;
-		
-		for (i = 0; i < ST_SIZE; i++) {
-		
+
+		for (int i = 0; i < ST_SIZE; i++) {
 			if (symtab->symbol_info[i] != nullptr
-			    && symtab->symbol_info[i]->type_info != nullptr
-			    && symtab->symbol_info[i]->type_info->type == NodeType::SIMPLE
-			    && symtab->symbol_info[i]->type_info->type_specifier.simple_type[0].number == KEY_VOID
-			    && !symtab->symbol_info[i]->is_ptr) {
+				&& symtab->symbol_info[i]->type_info != nullptr
+				&& symtab->symbol_info[i]->type_info->type == NodeType::SIMPLE
+				&& symtab->symbol_info[i]->type_info->type_specifier.simple_type[0].number == KEY_VOID
+				&& !symtab->symbol_info[i]->is_ptr) {
 				Log::error_at(symtab->symbol_info[i]->tok.loc, "variable " + symtab->symbol_info[i]->symbol + " is declared as void");
 			}
 		}
 	}
-	
+
 	bool Analyzer::check_pointer_arithmetic(PrimaryExpression *opr, PrimaryExpression *fact_1, PrimaryExpression *fact_2) {
-		
+
 		if (opr == nullptr || fact_1 == nullptr || fact_2 == nullptr)
 			return true;
-		
+
 		if (!fact_1->is_id && !fact_2->is_id)
 			return true;
-		
+
 		//if fact_1 is id & fact_2 is not and fact_1 id is pointer
 		if (fact_1->is_id && !fact_2->is_id && fact_1->id_info != nullptr && fact_1->id_info->is_ptr) {
 
+			std::string msg = "invalid Operand to binary " + opr->tok.string;
 			if (opr->tok.number == ARTHM_ADD || opr->tok.number == ARTHM_SUB) {
 				if (fact_2->tok.number == LIT_FLOAT || fact_2->tok.number == LIT_STRING) {
-					Log::error_at(opr->tok.loc, "invalid Operand to binary " + opr->tok.string
-					                            + " (have " + fact_2->tok.string + ")");
+					msg + " (have " + fact_2->tok.string + ")";
+					Log::error_at(opr->tok.loc, msg);
 					return false;
 				}
-			} else {
-				Log::error_at(opr->tok.loc, "invalid Operand to binary " + opr->tok.string + " (have " + fact_1->tok.string + ")");
+			}
+			else {
+				Log::error_at(opr->tok.loc, msg + " (have " + fact_1->tok.string + ")");
 				return false;
 			}
-		} else if (fact_2->is_id && !fact_1->is_id && fact_2->id_info != nullptr && fact_2->id_info->is_ptr) {
-			
+		}
+		else if (fact_2->is_id && !fact_1->is_id && fact_2->id_info != nullptr && fact_2->id_info->is_ptr) {
+
 			if (opr->tok.number == ARTHM_ADD || opr->tok.number == ARTHM_SUB) {
 				if (fact_1->tok.number == LIT_FLOAT || fact_1->tok.number == LIT_STRING) {
 					Log::error_at(opr->tok.loc, "invalid Operand to binary " + opr->tok.string + " (have " + fact_2->tok.string + ")");
 					return false;
 				}
-			} else {
+			}
+			else {
 				Log::error_at(opr->tok.loc, "invalid Operand to binary " + opr->tok.string + " (have " + fact_2->tok.string + ")");
 				return false;
 			}
 
-		} else if (fact_1->is_id && fact_2->is_id && fact_1->id_info != nullptr && fact_2->id_info != nullptr) {
-			
-            //if both are pointers
+		}
+		else if (fact_1->is_id && fact_2->is_id && fact_1->id_info != nullptr && fact_2->id_info != nullptr) {
+
+			//if both are pointers
 			if (fact_1->id_info->is_ptr && fact_2->id_info->is_ptr) {
 				Log::error_at(opr->tok.loc, "invalid Operand to binary " + opr->tok.string);
 				return false;
-			} else if (fact_1->id_info->is_ptr && !fact_2->id_info->is_ptr) {
+			}
+			else if (fact_1->id_info->is_ptr && !fact_2->id_info->is_ptr) {
 				if (opr->tok.number == ARTHM_ADD || opr->tok.number == ARTHM_SUB) {
-				} else {
+				}
+				else {
 					Log::error_at(opr->tok.loc, "invalid Operand to binary " + opr->tok.string);
 					return false;
 				}
-			} else if (fact_2->id_info->is_ptr && !fact_1->id_info->is_ptr) {
+			}
+			else if (fact_2->id_info->is_ptr && !fact_1->id_info->is_ptr) {
 				if (opr->tok.number == ARTHM_ADD || opr->tok.number == ARTHM_SUB) {
-				} else {
+				}
+				else {
 					Log::error_at(opr->tok.loc, "invalid Operand to binary " + opr->tok.string);
 					return false;
 				}
@@ -124,26 +130,24 @@ namespace xlang {
 		}
 		return true;
 	}
-	
+
 	/*
 	check type argument of primary expression
 	when operators are %, &, |, ^, <<, >>
 	allow only integer types not floating types
 	*/
-	bool Analyzer::check_primexp_type_argument(
-			PrimaryExpression *opr,
-			PrimaryExpression *fact_1,
-			PrimaryExpression *fact_2) {
+	bool Analyzer::check_primexp_type_argument(PrimaryExpression *opr, PrimaryExpression *fact_1, PrimaryExpression *fact_2) {
+
 		if (opr == nullptr)
 			return true;
-		
+
 		switch (opr->tok.number) {
-			case ARTHM_MOD :
-			case BIT_AND :
-			case BIT_OR :
-			case BIT_EXOR :
-			case BIT_LSHIFT :
-			case BIT_RSHIFT : {
+			case ARTHM_MOD:
+			case BIT_AND:
+			case BIT_OR:
+			case BIT_EXOR:
+			case BIT_LSHIFT:
+			case BIT_RSHIFT: {
 
 				if (opr->tok.number == BIT_LSHIFT || opr->tok.number == BIT_RSHIFT) {
 					if (fact_2->is_id) {
@@ -157,36 +161,36 @@ namespace xlang {
 					Log::error_at(opr->tok.loc, "invalid Operand to binary " + opr->tok.string + " (have " + fact_1->tok.string + ")");
 					return false;
 				}
-				
+
 				//if fact_2 is pointer id then error
 				if (fact_2 != nullptr && fact_2->is_id && fact_2->id_info != nullptr && fact_2->id_info->is_ptr) {
 					Log::error_at(opr->tok.loc, "invalid Operand to binary " + opr->tok.string + " (have " + fact_1->tok.string + ")");
 					return false;
 				}
-				
+
 				//if fact_1 is id but type is float/double then error
 				if (fact_1 != nullptr && fact_1->is_id && fact_1->id_info != nullptr && !fact_1->id_info->is_ptr) {
 					if (fact_1->id_info->type_info->type == NodeType::SIMPLE) {
 						if (fact_1->id_info->type_info->type_specifier.simple_type[0].number == KEY_DOUBLE
-						    || fact_1->id_info->type_info->type_specifier.simple_type[0].number == KEY_FLOAT) {
-							
+							|| fact_1->id_info->type_info->type_specifier.simple_type[0].number == KEY_FLOAT) {
+
 							Log::error_at(opr->tok.loc, "invalid Operand to binary " + opr->tok.string + " (have " + fact_1->tok.string + ")");
 							return false;
 						}
 					}
 				}
-				
+
 				//if fact_2 is id but type is float/double then error
 				if (fact_2 != nullptr && fact_2->is_id && fact_2->id_info != nullptr && !fact_2->id_info->is_ptr) {
 					if (fact_2->id_info->type_info->type == NodeType::SIMPLE) {
 						if (fact_2->id_info->type_info->type_specifier.simple_type[0].number == KEY_DOUBLE
-						    || fact_2->id_info->type_info->type_specifier.simple_type[0].number == KEY_FLOAT) {
+							|| fact_2->id_info->type_info->type_specifier.simple_type[0].number == KEY_FLOAT) {
 							Log::error_at(opr->tok.loc, "invalid Operand to binary " + opr->tok.string + " (have " + fact_2->tok.string + ")");
 							return false;
 						}
 					}
 				}
-				
+
 				//if fact_1 is not id and Token is float literal then error
 				if (fact_1 != nullptr && !fact_1->is_id && fact_1->tok.number == LIT_FLOAT) {
 					Log::error_at(opr->tok.loc, "invalid Operand to binary " + opr->tok.string + " (have " + fact_1->tok.string + ")");
@@ -205,99 +209,102 @@ namespace xlang {
 		}
 		return true;
 	}
-	
+
 	bool Analyzer::check_unary_primexp_type_argument(PrimaryExpression *pexpr) {
 
 		bool result = true;
 		SymbolInfo *syminf = nullptr;
-		
+
 		if (pexpr == nullptr)
 			return result;
-		
+
 		if (pexpr->is_id) {
 			syminf = search_id(pexpr->tok);
 			if (syminf == nullptr) {
 				Log::error_at(pexpr->tok.loc, "undeclared '" + pexpr->tok.string + "'");
 				return false;
-			} else {
+			}
+			else {
 				pexpr->id_info = syminf;
 			}
 		}
-		
+
 		//check for type as double or float
 		//because these types are not allowed for unary operation ~, & |, ^
 		//return false if found
 		if (pexpr->is_id && pexpr->id_info != nullptr) {
 			if (pexpr->id_info->type_info->type == NodeType::SIMPLE &&
-			   (pexpr->id_info->type_info->type_specifier.simple_type[0].number == KEY_DOUBLE ||
-                pexpr->id_info->type_info->type_specifier.simple_type[0].number == KEY_FLOAT)) {
+				(pexpr->id_info->type_info->type_specifier.simple_type[0].number == KEY_DOUBLE ||
+				 pexpr->id_info->type_info->type_specifier.simple_type[0].number == KEY_FLOAT)) {
 				result = false;
-			} else if (pexpr->id_info->is_ptr)
+			}
+			else if (pexpr->id_info->is_ptr)
 				result = false;
 		}
-		
+
 		if (!pexpr->is_id && pexpr->tok.number == LIT_FLOAT)
 			result = false;
-		
-		return (result && 
-                check_unary_primexp_type_argument(pexpr->left) &&
-                check_unary_primexp_type_argument(pexpr->right));
+
+		return (result &&
+				check_unary_primexp_type_argument(pexpr->left) &&
+				check_unary_primexp_type_argument(pexpr->right));
 	}
-	
+
 	bool Analyzer::check_unary_idexp_type_argument(IdentifierExpression *idexpr) {
 
 		bool result = true;
 		SymbolInfo *syminf = nullptr;
-		
+
 		if (idexpr == nullptr)
 			return result;
-		
+
 		if (idexpr->is_id) {
 			syminf = search_id(idexpr->tok);
 			if (syminf == nullptr) {
 				Log::error_at(idexpr->tok.loc, "undeclared '" + idexpr->tok.string + "'");
 				return false;
 			}
-			
+
 			idexpr->id_info = syminf;
 		}
-		
+
 		if (idexpr->is_id && idexpr->id_info != nullptr) {
 
-			if (idexpr->id_info->type_info->type_specifier.simple_type[0].number == KEY_DOUBLE || 
-                idexpr->id_info->type_info->type_specifier.simple_type[0].number == KEY_FLOAT) {
+			if (idexpr->id_info->type_info->type_specifier.simple_type[0].number == KEY_DOUBLE ||
+				idexpr->id_info->type_info->type_specifier.simple_type[0].number == KEY_FLOAT) {
 				result = false;
-			} else if (idexpr->id_info->is_ptr)
+			}
+			else if (idexpr->id_info->is_ptr)
 				result = false;
 		}
-		
+
 		if (!idexpr->is_id && !idexpr->is_oprtr && idexpr->tok.number == LIT_FLOAT)
 			result = false;
-		
+
 		return (result && check_unary_idexp_type_argument(idexpr->left)
-		        && check_unary_idexp_type_argument(idexpr->right));
+				&& check_unary_idexp_type_argument(idexpr->right));
 	}
-	
+
 	bool Analyzer::check_array_subscript(IdentifierExpression *idexpr) {
 
 		bool result = true;
 		SymbolInfo *syminf = nullptr;
-		
+
 		if (idexpr == nullptr)
 			return result;
-		
+
 		if (idexpr->is_id) {
 			syminf = search_id(idexpr->tok);
 			if (syminf == nullptr) {
 				Log::error_at(idexpr->tok.loc, "undeclared '" + idexpr->tok.string + "'");
 				return false;
 			}
-			
+
 			idexpr->id_info = syminf;
 		}
-		
+
 		if (idexpr->is_id && idexpr->id_info != nullptr) {
-			
+
 			if (!idexpr->id_info->is_array) {
 				result = false;
 				if (!idexpr->id_info->is_ptr)
@@ -308,24 +315,25 @@ namespace xlang {
 					else
 						result = false;
 				}
-			} else {
+			}
+			else {
 				if (idexpr->subscript.size() <= idexpr->id_info->arr_dimension_list.size())
 					result = true;
 				else
 					result = false;
 			}
-			
+
 			if (!result) {
 				Log::error_at(idexpr->tok.loc, "subscript is neither array nor pointer '" + idexpr->tok.string + "'");
 				Log::error_at(idexpr->tok.loc, "array dimension is different at declaration '" + idexpr->tok.string + "'");
 			}
 		}
-		
-		return (result && 
-                check_array_subscript(idexpr->left) &&
-                check_array_subscript(idexpr->right));
+
+		return (result &&
+				check_array_subscript(idexpr->left) &&
+				check_array_subscript(idexpr->right));
 	}
-	
+
 	void Analyzer::analyze_primary_expr(PrimaryExpression **_pexpr) {
 
 		std::stack<PrimaryExpression *> pexp_stack;
@@ -333,7 +341,7 @@ namespace xlang {
 		PrimaryExpression *pexp_root = *_pexpr;
 		PrimaryExpression *pexp = nullptr;
 		SymbolInfo *syminf = nullptr;
-		
+
 		if (pexp_root == nullptr)
 			return;
 
@@ -345,26 +353,26 @@ namespace xlang {
 				}
 			}
 		}
-		
+
 		//traverse tree post-orderly
 		//and get post order into pexp_out_stack
 		pexp_stack.push(pexp_root);
-		
+
 		while (!pexp_stack.empty()) {
 
 			pexp = pexp_stack.top();
 			pexp_stack.pop();
 			pexp_out_stack.push(pexp);
-			
+
 			if (pexp->left != nullptr)
 				pexp_stack.push(pexp->left);
-			
+
 			if (pexp->right != nullptr)
 				pexp_stack.push(pexp->right);
 		}
-		
+
 		clear_stack(pexp_stack);
-		
+
 		//get three addess code, two factors and one operator
 		//check factor types according to operator between them
 
@@ -377,14 +385,17 @@ namespace xlang {
 					check_pointer_arithmetic(pexp, factor_1, factor_2);
 					check_primexp_type_argument(pexp, factor_1, factor_2);
 					factor_1 = factor_2 = nullptr;
-				} else if (factor_1 != nullptr && factor_2 == nullptr) {
+				}
+				else if (factor_1 != nullptr && factor_2 == nullptr) {
 					check_primexp_type_argument(pexp, factor_1, factor_2);
 					factor_1 = nullptr;
-				} else if (factor_1 == nullptr && factor_2 != nullptr) {
+				}
+				else if (factor_1 == nullptr && factor_2 != nullptr) {
 					check_primexp_type_argument(pexp, factor_1, factor_2);
 					factor_2 = nullptr;
 				}
-			} else {
+			}
+			else {
 				if (pexp->is_id) {
 					syminf = search_id(pexp->tok); //search symbol
 					if (syminf == nullptr) {
@@ -392,7 +403,7 @@ namespace xlang {
 						pexp_out_stack.pop();
 						continue;
 					}
-					
+
 					//assign symbol info to Expression node
 					pexp->id_info = syminf;
 				}
@@ -402,13 +413,14 @@ namespace xlang {
 				else if (factor_1 != nullptr && factor_2 != nullptr) {
 					factor_1 = factor_2;
 					factor_2 = pexp;
-				} else if (factor_1 != nullptr && factor_2 == nullptr)
+				}
+				else if (factor_1 != nullptr && factor_2 == nullptr)
 					factor_2 = pexp;
 			}
 			pexp_out_stack.pop();
 		}
 	}
-	
+
 	void Analyzer::analyze_id_expr(IdentifierExpression **_idexpr) {
 
 		std::stack<IdentifierExpression *> idexp_stack;
@@ -420,10 +432,10 @@ namespace xlang {
 		RecordNode *record = nullptr;
 		std::string recordname;
 		size_t i;
-		
+
 		if (idexp_root == nullptr)
 			return;
-		
+
 		if (idexp_root->unary != nullptr) {
 			//if first operator is bit compl(~), then check rest of the expression
 			if (idexp_root->is_oprtr && idexp_root->tok.number == BIT_COMPL) {
@@ -433,63 +445,66 @@ namespace xlang {
 				}
 			}
 		}
-		
+
 		//if ++, --, &(addressof)
 		if (idexp != nullptr && idexp_root->unary != nullptr) {
 			if (idexp_root->is_oprtr &&
-			    (idexp_root->tok.number == INCR_OP || idexp->tok.number == DECR_OP
-			     || idexp_root->tok.number == ADDROF_OP)) {
+				(idexp_root->tok.number == INCR_OP || idexp->tok.number == DECR_OP
+				 || idexp_root->tok.number == ADDROF_OP)) {
 				analyze_id_expr(&idexp_root->unary);
 			}
 		}
-		
+
 		//traverse tree in-orderly
 		//and get expression in vector
 		idexp = idexp_root;
-		
+
 		while (!idexp_stack.empty() || idexp != nullptr) {
-			
+
 			if (idexp != nullptr) {
 				idexp_stack.push(idexp);
 				idexp = idexp->left;
-			} else {
+			}
+			else {
 				idexp = idexp_stack.top();
 				idexp_vec.push_back(idexp);
 				idexp_stack.pop();
 				idexp = idexp->right;
 			}
 		}
-		
+
 		clear_stack(idexp_stack);
-		
+
 		//get left mode node of id-Expression
 		idobj = idexp_vec[0];
 		if (idobj == nullptr)
 			return;
-		
+
 		if (idobj->unary != nullptr)
 			idobj = idobj->unary;
-		
+
 		if (idobj->is_id) {
 			//search symbol
 			syminf = search_id(idobj->tok);
 			if (syminf == nullptr) {
 				Log::error_at(idobj->tok.loc, "undeclared '" + idobj->tok.string + "'");
 				return;
-			} else {
+			}
+			else {
 				idobj->id_info = syminf;
 				//if symbol has simple type and it is array
 				if (idobj->id_info->type_info->type != NodeType::RECORD) {
 					if (idobj->id_info->is_array || idobj->id_info->is_ptr || idobj->is_subscript) {
 						check_array_subscript(idobj);
 						return;
-					} else
+					}
+					else
 						return;
 				}
 				recordname = idobj->id_info->type_info->type_specifier.record_type.string;
 			}
 		}
-		
+
 		i = 0;
 		idobj = nullptr;
 
@@ -497,12 +512,12 @@ namespace xlang {
 		//in record table members (idobj ./-> symbol ./-> symbol ....)
 		while (i + 1 < idexp_vec.size()) {
 			if (i < idexp_vec.size() &&
-			    i + 1 < idexp_vec.size() &&
-			    i + 2 < idexp_vec.size()) {
-				
+				i + 1 < idexp_vec.size() &&
+				i + 2 < idexp_vec.size()) {
+
 				idobj = idexp_vec[i];
 				idmember = idexp_vec[i + 2];
-				
+
 				if (idobj->is_id) {
 					record = SymbolTable::search_record_node(Compiler::record_table, recordname);
 					if (record != nullptr) {
@@ -513,7 +528,7 @@ namespace xlang {
 						}
 					}
 				}
-				
+
 				switch (idexp_vec[i + 1]->tok.number) {
 					case ARROW_OP :
 						if (idobj->id_info != nullptr && !idobj->id_info->is_ptr)
@@ -526,7 +541,7 @@ namespace xlang {
 					default:
 						break;
 				}
-				
+
 				if (idobj->id_info != nullptr) {
 					switch (idobj->id_info->type_info->type) {
 						case NodeType::RECORD :
@@ -536,7 +551,7 @@ namespace xlang {
 									Log::error_at(idmember->tok.loc, "record '" + record->recordname + "' has no member '" + idmember->tok.string + "'");
 								}
 							}
-							
+
 							break;
 						case NodeType::SIMPLE :
 							Log::error_at(idobj->tok.loc, "'" + idobj->tok.string + "' is not a record type");
@@ -545,22 +560,22 @@ namespace xlang {
 							break;
 					}
 				}
-				
+
 				i += 2;
 				idobj = nullptr;
 				idmember = nullptr;
 			}
 		}
 	}
-	
+
 	void Analyzer::analyze_sizeof_expr(SizeOfExpression **_szofexpr) {
 		SizeOfExpression *sizeexpr = *_szofexpr;
 		SymbolInfo *sminf = nullptr;
 		RecordNode *record = nullptr;
-		
+
 		if (sizeexpr == nullptr)
 			return;
-		
+
 		if (!sizeexpr->is_simple_type) {
 			record = SymbolTable::search_record_node(Compiler::record_table, sizeexpr->identifier.string);
 			if (record == nullptr) {
@@ -570,26 +585,26 @@ namespace xlang {
 			}
 		}
 	}
-	
+
 	void Analyzer::analyze_cast_expr(CastExpression **_cstexpr) {
 		CastExpression *cast_expr = *_cstexpr;
-		
+
 		if (cast_expr == nullptr)
 			return;
-		
+
 		analyze_id_expr(&cast_expr->target);
 	}
-	
+
 	void Analyzer::get_idexpr_idinfo(IdentifierExpression *idexpr, SymbolInfo **idinfo) {
 		if (idexpr == nullptr)
 			return;
-		
+
 		if (idexpr->left == nullptr && idexpr->right == nullptr)
 			*idinfo = idexpr->id_info;
-		
+
 		get_idexpr_idinfo(idexpr->right, &(*idinfo));
 	}
-	
+
 	IdentifierExpression *Analyzer::get_idexpr_attrbute_node(IdentifierExpression **_idexpr) {
 
 		std::stack<IdentifierExpression *> idexp_stack;
@@ -602,24 +617,25 @@ namespace xlang {
 		std::string recordname;
 		size_t i;
 		IdentifierExpression *result = nullptr;
-		
+
 		if (idexp_root == nullptr)
 			return nullptr;
-		
+
 		if (idexp_root->unary != nullptr) {
 			Log::error_at(idexp_root->tok.loc, "unary operator to assignement ");
 			return nullptr;
 		}
-		
+
 		//traverse tree in-orderly
 		idexp = idexp_root;
-		
+
 		while (!idexp_stack.empty() || idexp != nullptr) {
-			
+
 			if (idexp != nullptr) {
 				idexp_stack.push(idexp);
 				idexp = idexp->left;
-			} else {
+			}
+			else {
 				idexp = idexp_stack.top();
 				idexp_vec.push_back(idexp);
 				idexp_stack.pop();
@@ -628,39 +644,41 @@ namespace xlang {
 		}
 
 		clear_stack(idexp_stack);
-		
+
 		idobj = idexp_vec[0];
 		if (idobj == nullptr)
 			return nullptr;
-		
+
 		if (idobj->is_id) {
 			syminf = search_id(idobj->tok);
 			if (syminf == nullptr) {
 				Log::error_at(idobj->tok.loc, "undeclared '" + idobj->tok.string + "'");
 				return nullptr;
-			} else {
+			}
+			else {
 				idobj->id_info = syminf;
 				if (idobj->id_info->type_info->type != NodeType::RECORD) {
 					if (idobj->id_info->is_array || idobj->id_info->is_ptr) {
 						check_array_subscript(idobj);
 						return idobj;
-					} else
+					}
+					else
 						return idobj;
 				}
 				recordname = idobj->id_info->type_info->type_specifier.record_type.string;
 			}
 		}
-		
+
 		i = 0;
 		idobj = nullptr;
 		while (i + 1 < idexp_vec.size()) {
 			if (i < idexp_vec.size() &&
-			    i + 1 < idexp_vec.size() &&
-			    i + 2 < idexp_vec.size()) {
-				
+				i + 1 < idexp_vec.size() &&
+				i + 2 < idexp_vec.size()) {
+
 				idobj = idexp_vec[i];
 				idmember = idexp_vec[i + 2];
-				
+
 				//search id in record table and assign to node
 				if (idobj->is_id) {
 					record = SymbolTable::search_record_node(Compiler::record_table, recordname);
@@ -672,7 +690,7 @@ namespace xlang {
 						}
 					}
 				}
-				
+
 				i += 2;
 				result = idmember;
 				idobj = nullptr;
@@ -681,7 +699,7 @@ namespace xlang {
 		}
 		return result;
 	}
-	
+
 	int Analyzer::tree_height(ExpressionType exprtype, PrimaryExpression *pexpr, IdentifierExpression *idexpr) {
 		int left, right;
 		switch (exprtype) {
@@ -697,7 +715,7 @@ namespace xlang {
 						return right + 1;
 				}
 				break;
-			
+
 			case ExpressionType::ID_EXPR :
 				if (idexpr == nullptr)
 					return 0;
@@ -710,26 +728,28 @@ namespace xlang {
 						return right + 1;
 				}
 				break;
-            default:
-                break;
+			default:
+				break;
 		}
 		return 0;
 	}
-	
+
 	IdentifierExpression *Analyzer::get_assgnexpr_idexpr_attribute(IdentifierExpression *_idexp) {
 		IdentifierExpression *idexpr = nullptr;
 		SymbolInfo *syminf = nullptr;
-		
+
 		if (_idexp != nullptr &&
-		    tree_height(ExpressionType::ID_EXPR, nullptr, _idexp) > 1) {
+			tree_height(ExpressionType::ID_EXPR, nullptr, _idexp) > 1) {
 			idexpr = get_idexpr_attrbute_node(&_idexp);
-		} else {
+		}
+		else {
 			if (_idexp->is_id) {
 				syminf = search_id(_idexp->tok);
 				if (syminf == nullptr) {
 					Log::error_at(_idexp->tok.loc, "undeclared '" + _idexp->tok.string + "'");
 					return nullptr;
-				} else {
+				}
+				else {
 					_idexp->id_info = syminf;
 					if (_idexp->id_info->is_array || _idexp->id_info->is_ptr) {
 						check_array_subscript(_idexp);
@@ -738,23 +758,23 @@ namespace xlang {
 				}
 			}
 		}
-		
+
 		if (idexpr == nullptr)
 			return nullptr;
-		
+
 		return idexpr;
 	}
-	
+
 	bool Analyzer::check_assignment_type_argument(AssignmentExpression *assgnexpr, ExpressionType type, IdentifierExpression *idexpr, PrimaryExpression *pexpr) {
 
 		//if bitwise assignment operator, %=, &=, |=, ^=, <<=, >>=
-		if (assgnexpr->tok.number == ASSGN_MOD       ||
-		    assgnexpr->tok.number == ASSGN_BIT_AND   ||
-		    assgnexpr->tok.number == ASSGN_BIT_OR    ||
-		    assgnexpr->tok.number == ASSGN_BIT_EX_OR ||
-		    assgnexpr->tok.number == ASSGN_LSHIFT    ||
-		    assgnexpr->tok.number == ASSGN_RSHIFT) {
-			
+		if (assgnexpr->tok.number == ASSGN_MOD ||
+			assgnexpr->tok.number == ASSGN_BIT_AND ||
+			assgnexpr->tok.number == ASSGN_BIT_OR ||
+			assgnexpr->tok.number == ASSGN_BIT_EX_OR ||
+			assgnexpr->tok.number == ASSGN_LSHIFT ||
+			assgnexpr->tok.number == ASSGN_RSHIFT) {
+
 			switch (type) {
 				case ExpressionType::PRIMARY_EXPR :
 					if (!check_unary_primexp_type_argument(pexpr)) {
@@ -767,52 +787,53 @@ namespace xlang {
 					if (idexpr->id_info != nullptr) {
 						if (idexpr->id_info->type_info->type == NodeType::SIMPLE) {
 							if (idexpr->id_info->type_info->type_specifier.simple_type[0].number == KEY_FLOAT ||
-							    idexpr->id_info->type_info->type_specifier.simple_type[0].number == KEY_FLOAT) {
+								idexpr->id_info->type_info->type_specifier.simple_type[0].number == KEY_FLOAT) {
 								Log::error_at(assgnexpr->tok.loc, "wrong type argument to '" + assgnexpr->tok.string + "'");
 								return false;
 							}
-						} else {
+						}
+						else {
 							Log::error_at(assgnexpr->tok.loc, "expected only simple type argument to '" + assgnexpr->tok.string + "'");
 							return false;
 						}
 					}
 					break;
 
-                default:
-                    break;
+				default:
+					break;
 			}
 		}
 		return true;
 	}
-	
+
 	void Analyzer::simplify_assgn_primary_expr(AssignmentExpression **asexpr) {
 
 		AssignmentExpression *assgnexp = *asexpr;
 		Token tok;
 		PrimaryExpression *left = nullptr, *opr = nullptr;
-		
+
 		if (*asexpr == nullptr)
 			return;
-		
+
 		if (assgnexp->id_expr->left != nullptr && assgnexp->id_expr->right != nullptr)
 			return;
-		
+
 		tok = assgnexp->tok;
-		
+
 		(*asexpr)->tok.number = ASSGN;
 		(*asexpr)->tok.string = "=";
-		
+
 		left = Tree::get_primary_expr_mem();
 		left->is_id = true;
 		left->tok = assgnexp->id_expr->tok;
 		left->is_oprtr = false;
 		left->id_info = search_id(left->tok);
-		
+
 		opr = Tree::get_primary_expr_mem();
 		opr->is_oprtr = true;
 		opr->oprtr_kind = OperatorType::BINARY;
 		opr->left = left;
-		
+
 		switch (tok.number) {
 			case ASSGN_ADD :
 				opr->tok.string = "+";
@@ -857,11 +878,11 @@ namespace xlang {
 			default:
 				break;
 		}
-		
+
 		opr->right = (*asexpr)->expression->primary_expr;
 		(*asexpr)->expression->primary_expr = opr;
 	}
-	
+
 	void Analyzer::analyze_assgn_expr(AssignmentExpression **_assgnexpr) {
 
 		AssignmentExpression *assgnexpr = *_assgnexpr;
@@ -870,14 +891,14 @@ namespace xlang {
 		IdentifierExpression *idright = nullptr;
 		FunctionInfo *funcinfo = nullptr;
 		std::map<std::string, FunctionInfo *>::iterator findit;
-		
+
 		if (assgnexpr == nullptr)
 			return;
-		
+
 		analyze_id_expr(&assgnexpr->id_expr);
 		if (assgnexpr->tok.number != ASSGN)
 			simplify_assgn_primary_expr(&(*_assgnexpr));
-		
+
 		analyze_expr(&assgnexpr->expression);
 		assgnleft = get_assgnexpr_idexpr_attribute(assgnexpr->id_expr);
 		if (assgnleft == nullptr)
@@ -889,19 +910,20 @@ namespace xlang {
 		typeinf = assgnleft->id_info->type_info;
 		if (typeinf == nullptr)
 			return;
-		
+
 		switch (assgnexpr->expression->expr_kind) {
 
 			case ExpressionType::PRIMARY_EXPR : {
 				PrimaryExpression *prim_exp = assgnexpr->expression->primary_expr;
-				
+
 				if (!check_assignment_type_argument(assgnexpr, ExpressionType::PRIMARY_EXPR, nullptr, prim_exp))
 					return;
-				
+
 				if (assgnleft->id_info->is_ptr && prim_exp->is_id && prim_exp->id_info->is_ptr) {
 					if (typeinf->type != prim_exp->id_info->type_info->type)
 						Log::error_at(assgnexpr->tok.loc, "incompatible types for assignment to '" + assgnleft->tok.string + "'");
-				} else {
+				}
+				else {
 
 					if (assgnleft->id_info->is_ptr && !prim_exp->is_id) {
 						if (!check_unary_primexp_type_argument(prim_exp))
@@ -912,7 +934,7 @@ namespace xlang {
 						if (!check_unary_primexp_type_argument(prim_exp))
 							Log::error_at(assgnexpr->tok.loc, "incompatible types for assignment to '" + assgnleft->tok.string + "'");
 					}
-					
+
 					if (typeinf->type == NodeType::SIMPLE && typeinf->type_specifier.simple_type[0].number == KEY_CHAR) {
 						if (!assgnleft->id_info->is_array && !assgnleft->id_info->is_ptr) {
 							if (prim_exp->tok.number == LIT_STRING) {
@@ -921,17 +943,17 @@ namespace xlang {
 							}
 						}
 					}
-					
+
 					if (!prim_exp->is_id)
 						return;
-					
+
 					switch (typeinf->type) {
 						case NodeType::SIMPLE :
 							switch (prim_exp->id_info->type_info->type) {
 								case NodeType::SIMPLE :
 									if ((typeinf->type_specifier.simple_type[0].number == KEY_VOID) &&
-									    (prim_exp->id_info->type_info->type_specifier.simple_type[0].number == KEY_FLOAT ||
-									     prim_exp->id_info->type_info->type_specifier.simple_type[0].number == KEY_DOUBLE)) {
+										(prim_exp->id_info->type_info->type_specifier.simple_type[0].number == KEY_FLOAT ||
+										 prim_exp->id_info->type_info->type_specifier.simple_type[0].number == KEY_DOUBLE)) {
 										Log::error_at(assgnexpr->tok.loc, "incompatible types for assignment to '" + assgnleft->tok.string + "'");
 									}
 									break;
@@ -939,42 +961,42 @@ namespace xlang {
 									if (typeinf->type_specifier.simple_type[0].number != KEY_INT && typeinf->type_specifier.simple_type[0].number != KEY_VOID)
 										Log::error_at(assgnexpr->tok.loc, "incompatible types for assignment to '" + assgnleft->tok.string + "'");
 									break;
-                                default:
-                                    break;                                    
+								default:
+									break;
 							}
 							break;
 						case NodeType::RECORD :
 							switch (prim_exp->id_info->type_info->type) {
 								case NodeType::SIMPLE :
 									if (prim_exp->id_info->type_info->type_specifier.simple_type[0].number == KEY_INT ||
-									    prim_exp->id_info->type_info->type_specifier.simple_type[0].number == KEY_VOID) {
+										prim_exp->id_info->type_info->type_specifier.simple_type[0].number == KEY_VOID) {
 										Log::error_at(assgnexpr->tok.loc, "incompatible types for assignment to45 '" + assgnleft->tok.string + "'");
 										return;
 									}
 									break;
 								case NodeType::RECORD :
 									break;
-                                default:
-                                    break;                                    
+								default:
+									break;
 							}
 							break;
-                        default:
-                            break;
+						default:
+							break;
 					}
 				}
-				
+
 				if (typeinf->type == NodeType::RECORD && prim_exp->is_id) {
 					if (typeinf->type_specifier.record_type.string != prim_exp->id_info->type_info->type_specifier.record_type.string) {
 						Log::error_at(assgnexpr->tok.loc, "incompatible types for assignment to '" + assgnleft->tok.string + "'");
 					}
-					
+
 					if (typeinf->type_specifier.record_type.string == prim_exp->id_info->type_info->type_specifier.record_type.string &&
-					    assgnleft->id_info->is_ptr != prim_exp->id_info->is_ptr &&
-					    assgnleft->id_info->ptr_oprtr_count != prim_exp->id_info->ptr_oprtr_count) {
+						assgnleft->id_info->is_ptr != prim_exp->id_info->is_ptr &&
+						assgnleft->id_info->ptr_oprtr_count != prim_exp->id_info->ptr_oprtr_count) {
 						Log::error_at(assgnexpr->tok.loc, "incompatible types for assignment to '" + assgnleft->tok.string + "'");
 					}
 				}
-				
+
 				break;
 			}
 			case ExpressionType::CAST_EXPR : {
@@ -982,10 +1004,10 @@ namespace xlang {
 
 				if (typeinf->type == NodeType::SIMPLE && cast_exp->is_simple_type) {
 					if ((typeinf->type_specifier.simple_type[0].number == KEY_FLOAT ||
-					     typeinf->type_specifier.simple_type[0].number == KEY_DOUBLE) &&
-					    (cast_exp->simple_type[0].number == KEY_FLOAT ||
-					     cast_exp->simple_type[0].number == KEY_DOUBLE)) {
-						
+						 typeinf->type_specifier.simple_type[0].number == KEY_DOUBLE) &&
+						(cast_exp->simple_type[0].number == KEY_FLOAT ||
+						 cast_exp->simple_type[0].number == KEY_DOUBLE)) {
+
 						idright = get_assgnexpr_idexpr_attribute(cast_exp->target);
 						if (idright == nullptr)
 							return;
@@ -993,10 +1015,12 @@ namespace xlang {
 							Log::error_at(assgnexpr->tok.loc, "incompatible types for assignment by casting to '" + assgnleft->tok.string + "'");
 					}
 					//record type = record type
-				} else if (typeinf->type == NodeType::RECORD && !cast_exp->is_simple_type) {
+				}
+				else if (typeinf->type == NodeType::RECORD && !cast_exp->is_simple_type) {
 					if (typeinf->type_specifier.record_type.string != cast_exp->identifier.string)
 						Log::error_at(assgnexpr->tok.loc, "incompatible types for assignment by casting to '" + assgnleft->tok.string + "'");
-				} else {
+				}
+				else {
 					idright = get_assgnexpr_idexpr_attribute(cast_exp->target);
 					if (idright == nullptr)
 						return;
@@ -1006,31 +1030,32 @@ namespace xlang {
 
 			case ExpressionType::ID_EXPR :
 				if (assgnexpr->expression->id_expr->tok.number == ADDROF_OP) {
-					
+
 					analyze_id_expr(&assgnexpr->expression->id_expr->unary);
 					idright = get_assgnexpr_idexpr_attribute(assgnexpr->expression->id_expr->unary);
 					if (idright == nullptr)
 						return;
-					
+
 					if (!assgnleft->id_info->is_ptr) {
 						Log::error_at(assgnexpr->tok.loc, "pointer type expected to the left hand side '" + assgnleft->tok.string + "'");
 						return;
 					}
-					
+
 					if (idright->id_info != nullptr && assgnleft->id_info->is_ptr && idright->id_info->is_ptr &&
-					    assgnleft->id_info->ptr_oprtr_count <= idright->id_info->ptr_oprtr_count) {
+						assgnleft->id_info->ptr_oprtr_count <= idright->id_info->ptr_oprtr_count) {
 						Log::error_at(assgnexpr->tok.loc, "invalid pointer type assignment ");
 						return;
 					}
-					
+
 					if (assgnleft && typeinf->type == NodeType::RECORD && idright->id_info->type_info->type != NodeType::RECORD) {
 						if (idright->id_info->type_info->type == NodeType::SIMPLE &&
-						    idright->id_info->type_info->type_specifier.simple_type[0].number != KEY_INT) {
+							idright->id_info->type_info->type_specifier.simple_type[0].number != KEY_INT) {
 							Log::error_at(assgnexpr->tok.loc, "invalid pointer type assignment ");
 							return;
 						}
 					}
-				} else {
+				}
+				else {
 					idright = get_assgnexpr_idexpr_attribute(assgnexpr->expression->id_expr);
 					if (idright == nullptr)
 						return;
@@ -1038,9 +1063,10 @@ namespace xlang {
 						return;
 					}
 					if (idright->id_info != nullptr && assgnleft->id_info->is_ptr && idright->id_info->is_ptr &&
-					    assgnleft->id_info->ptr_oprtr_count != idright->id_info->ptr_oprtr_count) {
+						assgnleft->id_info->ptr_oprtr_count != idright->id_info->ptr_oprtr_count) {
 						Log::error_at(assgnexpr->tok.loc, "invalid pointer type assignment ");
-					} else if (idright->id_info != nullptr && assgnleft->id_info->is_ptr && !idright->id_info->is_ptr) {
+					}
+					else if (idright->id_info != nullptr && assgnleft->id_info->is_ptr && !idright->id_info->is_ptr) {
 						if (idright->id_info->type_info->type_specifier.simple_type[0].number != KEY_INT) {
 							Log::error_at(assgnexpr->tok.loc, "invalid type assignment4 '" + idright->id_info->tok.string + "' to '" + assgnleft->id_info->tok.string + "'");
 							return;
@@ -1049,12 +1075,15 @@ namespace xlang {
 					if (assgnleft && idright->id_info && typeinf->type == NodeType::RECORD && idright->id_info->type_info->type != NodeType::RECORD) {
 						Log::error_at(assgnexpr->tok.loc, "invalid type assignment '" + idright->id_info->tok.string + "' to '" + assgnleft->id_info->tok.string + "'");
 						return;
-					} else if (assgnleft && idright->id_info && typeinf->type == NodeType::SIMPLE && idright->id_info->type_info->type != NodeType::SIMPLE) {
+					}
+					else if (assgnleft && idright->id_info && typeinf->type == NodeType::SIMPLE && idright->id_info->type_info->type != NodeType::SIMPLE) {
 						return;
-					} else if (assgnleft && idright->id_info && assgnleft->id_info->is_ptr && typeinf->type == NodeType::RECORD && idright->id_info->type_info->type != NodeType::RECORD) {
+					}
+					else if (assgnleft && idright->id_info && assgnleft->id_info->is_ptr && typeinf->type == NodeType::RECORD && idright->id_info->type_info->type != NodeType::RECORD) {
 						Log::error_at(assgnexpr->tok.loc, "invalid type assignment '" + idright->id_info->tok.string + "' to '" + assgnleft->id_info->tok.string + "'");
 						return;
-					} else if (assgnleft && idright->id_info && assgnleft->id_info->is_ptr && typeinf->type == NodeType::RECORD && idright->id_info->type_info->type == NodeType::SIMPLE) {
+					}
+					else if (assgnleft && idright->id_info && assgnleft->id_info->is_ptr && typeinf->type == NodeType::RECORD && idright->id_info->type_info->type == NodeType::SIMPLE) {
 						if (idright->id_info->type_info->type_specifier.simple_type[0].number != KEY_INT) {
 							Log::error_at(assgnexpr->tok.loc, "invalid type assignment '" + idright->id_info->tok.string + "' to '" + assgnleft->id_info->tok.string + "'");
 							return;
@@ -1062,103 +1091,103 @@ namespace xlang {
 					}
 				}
 				break;
-			
+
 			case ExpressionType::FUNC_CALL_EXPR : {
 				if (assgnexpr->expression->call_expr == nullptr)
 					return;
-				
+
 				findit = Compiler::func_table->find(assgnexpr->expression->call_expr->function->tok.string);
 				if (findit == Compiler::func_table->end())
 					return;
-				
+
 				funcinfo = findit->second;
-				
+
 				if (funcinfo != nullptr) {
 					if (typeinf->type != funcinfo->return_type->type) {
 						Log::error_at(assgnexpr->tok.loc, "mismatched type assignment of function-call '" + funcinfo->func_name + "' to '" + assgnleft->id_info->tok.string + "'");
 						return;
 					}
-					
+
 					if (funcinfo->return_type == nullptr)
 						return;
 					if (typeinf == nullptr)
 						return;
-					
+
 					switch (typeinf->type) {
 						case NodeType::SIMPLE :
 							if (typeinf->type_specifier.simple_type[0].number != funcinfo->return_type->type_specifier.simple_type[0].number) {
 								Log::error_at(assgnexpr->tok.loc,
-										"mismatched type assignment of function-call '" + funcinfo->func_name + "' to '"
-										+ assgnleft->id_info->tok.string + "'");
+											  "mismatched type assignment of function-call '" + funcinfo->func_name + "' to '"
+											  + assgnleft->id_info->tok.string + "'");
 								return;
 							}
 							if (assgnleft->id_info->ptr_oprtr_count != funcinfo->ptr_oprtr_count) {
 								Log::error_at(assgnexpr->tok.loc,
-										"mismatched pointer type assignment of function-call '" + funcinfo->func_name + "' to '" + assgnleft->id_info->tok.string + "'");
-								
+											  "mismatched pointer type assignment of function-call '" + funcinfo->func_name + "' to '" + assgnleft->id_info->tok.string + "'");
+
 								return;
 							}
 							break;
-						
+
 						case NodeType::RECORD :
 							if (typeinf->type_specifier.record_type.string !=
-							    funcinfo->return_type->type_specifier.record_type.string) {
+								funcinfo->return_type->type_specifier.record_type.string) {
 								Log::error_at(assgnexpr->tok.loc,
-										"mismatched type assignment of function-call '" + funcinfo->func_name + "' to '" + assgnleft->id_info->tok.string + "'");
+											  "mismatched type assignment of function-call '" + funcinfo->func_name + "' to '" + assgnleft->id_info->tok.string + "'");
 								return;
 							}
 							if (assgnleft->id_info->ptr_oprtr_count != funcinfo->ptr_oprtr_count) {
 								Log::error_at(assgnexpr->tok.loc,
-										"mismatched pointer type assignment of function-call '" + funcinfo->func_name + "' to '" + assgnleft->id_info->tok.string + "'");
+											  "mismatched pointer type assignment of function-call '" + funcinfo->func_name + "' to '" + assgnleft->id_info->tok.string + "'");
 								return;
 							}
 							break;
-                        default:
-                            break;
+						default:
+							break;
 					}
 				}
 			}
 				break;
-			
+
 			default:
 				break;
 		}
 	}
-	
+
 	void Analyzer::analyze_funccall_expr(CallExpression **_funcallexpr) {
 
 		CallExpression *funcexpr = *_funcallexpr;
 		FunctionInfo *funcinfo = nullptr;
 		std::map<std::string, FunctionInfo *>::iterator findit;
 		std::list<Expression *>::iterator func_exprit;
-		
+
 		if (funcexpr == nullptr)
 			return;
-		
+
 		findit = Compiler::func_table->find(funcexpr->function->tok.string);
 		if (findit == Compiler::func_table->end()) {
 			Log::error_at(funcexpr->function->tok.loc, "undeclared function called '" + funcexpr->function->tok.string + "'");
 			return;
 		}
-		
+
 		funcinfo = findit->second;
 		if (funcinfo != nullptr) {
 			if (funcinfo->param_list.size() != funcexpr->expression_list.size()) {
 				Log::error_at(funcexpr->function->tok.loc,
-						"In function call '" + funcexpr->function->tok.string + "', require " + std::to_string(funcinfo->param_list.size()) + " arguments");
+							  "In function call '" + funcexpr->function->tok.string + "', require " + std::to_string(funcinfo->param_list.size()) + " arguments");
 				return;
 			}
 		}
-		
+
 		for (auto exp: funcexpr->expression_list)
 			analyze_expr(&exp);
 	}
-	
+
 	void Analyzer::analyze_expr(Expression **__expr) {
 		Expression *_expr = *__expr;
 		if (_expr == nullptr)
 			return;
-		
+
 		switch (_expr->expr_kind) {
 			case ExpressionType::PRIMARY_EXPR :
 				analyze_primary_expr(&(_expr->primary_expr));
@@ -1180,49 +1209,50 @@ namespace xlang {
 				break;
 		}
 	}
-	
+
 	void Analyzer::analyze_label_statement(LabelStatement **labelstmt) {
 
 		std::map<std::string, Token>::iterator labels_it;
 		if (*labelstmt == nullptr)
 			return;
-		
+
 		labels_it = labels.find((*labelstmt)->label.string);
 		if (labels_it != labels.end()) {
 			Log::error_at((*labelstmt)->label.loc, "duplicate label '" + (*labelstmt)->label.string + "'");
 			return;
-		} else
+		}
+		else
 			labels.insert(std::pair<std::string, Token>((*labelstmt)->label.string, (*labelstmt)->label));
 	}
-	
+
 	void Analyzer::analyze_selection_statement(SelectStatement **selstmt) {
 
 		if (*selstmt == nullptr)
 			return;
-		
+
 		analyze_expr(&((*selstmt)->condition));
 		analyze_statement(&((*selstmt)->if_statement));
 		analyze_statement(&((*selstmt)->else_statement));
 	}
-	
+
 	void Analyzer::analyze_iteration_statement(IterationStatement **iterstmt) {
 		if (*iterstmt == nullptr)
 			return;
-		
+
 		break_inloop++;
 		continue_inloop++;
-		
+
 		switch ((*iterstmt)->type) {
 			case IterationType::WHILE :
 				analyze_expr(&((*iterstmt)->_while.condition));
 				analyze_statement(&((*iterstmt)->_while.statement));
 				break;
-			
+
 			case IterationType::DOWHILE :
 				analyze_expr(&((*iterstmt)->_dowhile.condition));
 				analyze_statement(&((*iterstmt)->_dowhile.statement));
 				break;
-			
+
 			case IterationType::FOR :
 				analyze_expr(&((*iterstmt)->_for.init_expr));
 				analyze_expr(&((*iterstmt)->_for.condition));
@@ -1231,21 +1261,23 @@ namespace xlang {
 				break;
 		}
 	}
-	
+
 	void Analyzer::analyze_return_jmpstmt(JumpStatement **jmpstmt) {
 
 		TypeInfo *returntype = nullptr;
 		analyze_expr(&((*jmpstmt)->expression));
-		
+
 		if (func_symtab != nullptr) {
 			if (func_symtab->func_info != nullptr) {
 				returntype = func_symtab->func_info->return_type;
-			} else
+			}
+			else
 				return;
-			
-		} else
+
+		}
+		else
 			return;
-		
+
 		switch (returntype->type) {
 			case NodeType::SIMPLE :
 				if (returntype->type_specifier.simple_type[0].number == KEY_VOID && (*jmpstmt)->expression != nullptr) {
@@ -1255,16 +1287,16 @@ namespace xlang {
 				break;
 			case NodeType::RECORD :
 				break;
-            default:
-                break;
+			default:
+				break;
 		}
 	}
-	
+
 	void Analyzer::analyze_jump_statement(JumpStatement **jmpstmt) {
 
 		if (*jmpstmt == nullptr)
 			return;
-		
+
 		switch ((*jmpstmt)->type) {
 			case JumpType::BREAK :
 				if (break_inloop > 0)
@@ -1290,12 +1322,12 @@ namespace xlang {
 				break;
 		}
 	}
-	
+
 	void Analyzer::analyze_goto_jmpstmt() {
 
 		std::list<Token>::iterator it;
 		std::map<std::string, Token>::iterator labels_it;
-		
+
 		for (it = goto_list.begin(); it != goto_list.end(); it++) {
 			labels_it = labels.find(it->string);
 			if (labels_it == labels.end()) {
@@ -1305,34 +1337,34 @@ namespace xlang {
 		}
 		goto_list.clear();
 	}
-	
+
 	bool Analyzer::is_digit(char ch) {
 		return ((ch - '0' >= 0) && (ch - '0' <= 9));
 	}
-	
+
 	std::string Analyzer::get_template_token(std::string asmtemplate) {
 
 		std::string asmtoken;
 		unsigned i;
-		
+
 		for (i = 0; i < asmtemplate.length(); i++) {
 			if (is_digit(asmtemplate.at(i))) {
 				asmtoken.push_back(asmtemplate.at(i));
-                continue;
-			} 
-            break;
+				continue;
+			}
+			break;
 		}
 
 		return asmtoken;
 	}
-	
+
 	std::vector<int> Analyzer::get_asm_template_tokens_vector(Token tok) {
 
 		size_t loc;
 		std::vector<int> v;
 		std::string asmtoken;
 		std::string asmtemplate = tok.string;
-		
+
 		loc = asmtemplate.find_first_of("%");
 		while (loc != std::string::npos) {
 
@@ -1349,30 +1381,30 @@ namespace xlang {
 		}
 		return v;
 	}
-	
+
 	void Analyzer::analyze_asm_template(AsmStatement **asmstmt) {
-		
-        AsmStatement *asmstmt2 = *asmstmt;
+
+		AsmStatement *asmstmt2 = *asmstmt;
 		std::vector<int> v;
 		size_t maxelem;
 		size_t operandsize;
-		
+
 		if (asmstmt2->output_operand.empty())
 			return;
-		
-        if (asmstmt2->input_operand.empty())
+
+		if (asmstmt2->input_operand.empty())
 			return;
-		
+
 		v = get_asm_template_tokens_vector(asmstmt2->asm_template);
 		operandsize = asmstmt2->output_operand.size() + asmstmt2->input_operand.size();
-		
-        if (v.size() > 1) {
+
+		if (v.size() > 1) {
 			maxelem = *(std::max_element(std::begin(v), std::end(v)));
 			if (maxelem > operandsize - 1)
 				Log::error_at(asmstmt2->asm_template.loc, "asm Operand number out of range '%" + std::to_string(maxelem) + "'");
 		}
 	}
-	
+
 	void Analyzer::analyze_asm_output_operand(AsmOperand **Operand) {
 
 		if (*Operand == nullptr)
@@ -1382,7 +1414,7 @@ namespace xlang {
 		std::string constraint = constrainttok.string;
 		size_t len = constraint.length();
 		char ch;
-		
+
 		if (constraint.empty()) {
 			Log::error_at(constrainttok.loc, "asm output Operand constraint lacks '='");
 			return;
@@ -1394,25 +1426,28 @@ namespace xlang {
 			else
 				Log::error_at(constrainttok.loc, "asm output Operand constraint lacks '='");
 			return;
-		} else if (len > 1) {
+		}
+		else if (len > 1) {
 			if (constraint.at(0) == '=') {
 				ch = constraint.at(1);
 				if (ch == 'a' || ch == 'b' || ch == 'c' || ch == 'd' || ch == 'S' || ch == 'D' || ch == 'm') {
 					if (ch == 'm') {
-						if ((*Operand)->expression == nullptr) 
+						if ((*Operand)->expression == nullptr)
 							Log::error_at(constrainttok.loc, "asm constraint '=m' requires memory location id");
-						else 
+						else
 							analyze_expr(&(*Operand)->expression);
 					}
-				} else {
+				}
+				else {
 					Log::error_at(constrainttok.loc, "asm inconsistent Operand constraints '" + constraint + "'");
 				}
-			} else {
+			}
+			else {
 				Log::error_at(constrainttok.loc, "asm output Operand constraint lacks '='");
 			}
 		}
 	}
-	
+
 	void Analyzer::analyze_asm_input_operand(AsmOperand **Operand) {
 
 		if (*Operand == nullptr)
@@ -1422,7 +1457,7 @@ namespace xlang {
 		std::string constraint = constrainttok.string;
 		size_t len = constraint.length();
 		char ch;
-		
+
 		if (len > 0) {
 			ch = constraint.at(0);
 			if (ch == 'a' || ch == 'b' || ch == 'c' || ch == 'd' || ch == 'S' || ch == 'D' || ch == 'm' || ch == 'i') {
@@ -1432,11 +1467,12 @@ namespace xlang {
 					else
 						analyze_expr(&(*Operand)->expression);
 				}
-			} else
+			}
+			else
 				Log::error_at(constrainttok.loc, "asm inconsistent Operand constraints '" + constraint + "'");
 		}
 	}
-	
+
 	void Analyzer::analyze_asm_operand_expr(Expression **_expr) {
 
 		Expression *expr2 = *_expr;
@@ -1449,8 +1485,8 @@ namespace xlang {
 					return;
 
 				if (expr2->primary_expr->left != nullptr ||
-				    expr2->primary_expr->right != nullptr ||
-				    expr2->primary_expr->unary_node != nullptr) {
+					expr2->primary_expr->right != nullptr ||
+					expr2->primary_expr->unary_node != nullptr) {
 					Log::error_at(expr2->primary_expr->tok.loc, "only single node primary expression expected in asm Operand");
 				}
 
@@ -1460,7 +1496,7 @@ namespace xlang {
 				return;
 		}
 	}
-	
+
 	void Analyzer::analyze_asm_statement(AsmStatement **asmstmt) {
 
 		AsmStatement *asmstmt2 = *asmstmt;
@@ -1468,7 +1504,7 @@ namespace xlang {
 
 		if (asmstmt2 == nullptr)
 			return;
-		
+
 		while (asmstmt2 != nullptr) {
 			//amalyze asm template
 			analyze_asm_template(&asmstmt2);
@@ -1489,13 +1525,13 @@ namespace xlang {
 			asmstmt2 = asmstmt2->p_next;
 		}
 	}
-	
+
 	void Analyzer::analyze_statement(Statement **_stmt) {
 
 		Statement *_stmt2 = *_stmt;
 		if (_stmt2 == nullptr)
 			return;
-		
+
 		while (_stmt2 != nullptr) {
 			switch (_stmt2->type) {
 				case StatementType::LABEL :
@@ -1522,16 +1558,16 @@ namespace xlang {
 			_stmt2 = _stmt2->p_next;
 		}
 	}
-	
+
 	void Analyzer::analyze_func_param_info(FunctionInfo **funcinfo) {
 
 		std::list<FuncParamInfo *>::iterator it;
 		if (*funcinfo == nullptr)
 			return;
-		
+
 		if ((*funcinfo)->is_extern)
 			return;
-		
+
 		if ((*funcinfo)->param_list.size() > 0) {
 			it = (*funcinfo)->param_list.begin();
 			while (it != (*funcinfo)->param_list.end()) {
@@ -1539,7 +1575,8 @@ namespace xlang {
 					if ((*it)->symbol_info == nullptr) {
 						Log::error_at((*funcinfo)->tok.loc, "identifier expected in function parameter '" + (*funcinfo)->func_name + "'");
 						return;
-					} else if ((*it)->symbol_info->symbol.empty()) {
+					}
+					else if ((*it)->symbol_info->symbol.empty()) {
 						Log::error_at((*funcinfo)->tok.loc, "identifier expected in function parameter '" + (*funcinfo)->func_name + "'");
 						return;
 					}
@@ -1548,37 +1585,38 @@ namespace xlang {
 			}
 		}
 	}
-	
+
 	bool Analyzer::has_constant_member(PrimaryExpression *pexpr) {
 		if (pexpr == nullptr)
 			return true;
-		
+
 		if (pexpr->is_id)
 			return (has_constant_member(pexpr->left) && has_constant_member(pexpr->right));
 		else
 			return (has_constant_member(pexpr->left) && has_constant_member(pexpr->right));
-		
+
 		return true;
 	}
-	
+
 	bool Analyzer::has_constant_array_subscript(IdentifierExpression *idexpr) {
 		bool b = true;
 		if (idexpr == nullptr)
 			return true;
 		if (idexpr->is_subscript) {
 			for (auto x: idexpr->subscript) {
-				if (x.number == LIT_BIN     ||
-                    x.number == LIT_DECIMAL || 
-                    x.number == LIT_HEX     || 
-                    x.number == LIT_OCTAL) {
+				if (x.number == LIT_BIN ||
+					x.number == LIT_DECIMAL ||
+					x.number == LIT_HEX ||
+					x.number == LIT_OCTAL) {
 					b &= true;
-				} else
+				}
+				else
 					b &= false;
 			}
 		}
 		return b;
 	}
-	
+
 	void Analyzer::analyze_global_assignment(TreeNode **trnode) {
 
 		TreeNode *trhead = *trnode;
@@ -1587,7 +1625,7 @@ namespace xlang {
 
 		if (trhead == nullptr)
 			return;
-		
+
 		while (trhead != nullptr) {
 			if (trhead->symtab != nullptr) {
 				if (trhead->symtab->func_info != nullptr) {
@@ -1595,11 +1633,11 @@ namespace xlang {
 					continue;
 				}
 			}
-			
+
 			stmthead = trhead->statement;
 			if (stmthead == nullptr)
 				return;
-			
+
 			while (stmthead != nullptr) {
 				if (stmthead->type == StatementType::EXPR) {
 					_expr = stmthead->expression_statement->expression;
@@ -1614,7 +1652,8 @@ namespace xlang {
 									PrimaryExpression *pexpr = _expr->assgn_expr->expression->primary_expr;
 									if (pexpr->left != nullptr || pexpr->right != nullptr)
 										Log::error_at(_expr->assgn_expr->tok.loc, "constant expression expected ");
-								} else
+								}
+								else
 									Log::error_at(_expr->assgn_expr->tok.loc, "expected constant primary expression ");
 								break;
 							case ExpressionType::PRIMARY_EXPR :
@@ -1640,7 +1679,7 @@ namespace xlang {
 			trhead = trhead->p_next;
 		}
 	}
-	
+
 	void Analyzer::analyze_func_params(FunctionInfo *func_params) {
 		if (func_params == nullptr)
 			return;
@@ -1661,21 +1700,21 @@ namespace xlang {
 			}
 		}
 	}
-	
+
 	void Analyzer::analyze_local_declaration(TreeNode **trnode) {
 
 		TreeNode *trhead = *trnode;
 		if (trhead == nullptr)
 			return;
-		
+
 		while (trhead != nullptr) {
 			if (trhead->symtab != nullptr) {
 				func_symtab = trhead->symtab;
 				func_info = trhead->symtab->func_info;
-				
+
 				if (func_symtab != nullptr && func_info != nullptr)
 					analyze_func_params(func_info);
-				
+
 				for (FuncParamInfo *param: func_info->param_list) {
 					if (param != nullptr && param->symbol_info != nullptr) {
 						if (SymbolTable::search_symbol(func_symtab, param->symbol_info->symbol)) {
@@ -1687,14 +1726,14 @@ namespace xlang {
 			trhead = trhead->p_next;
 		}
 	}
-	
+
 	void Analyzer::analyze(TreeNode **trnode) {
 		TreeNode *trhead = nullptr;
 		parse_tree = trhead = *trnode;
-		
+
 		if (trhead == nullptr)
 			return;
-		
+
 		check_invalid_type_declaration(Compiler::symtab);
 		while (trhead != nullptr) {
 			if (trhead->symtab != nullptr) {
@@ -1709,10 +1748,10 @@ namespace xlang {
 			labels.clear();
 			trhead = trhead->p_next;
 		}
-		
+
 		//one pass for localy declared variables
 		analyze_local_declaration(&(*trnode));
-		
+
 		//one pass for globally declared expressions
 		analyze_global_assignment(&(*trnode));
 	}

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019  Pritam Zope
- * Copyright (c) 2021, Aaron Clark Diaz.
+ * Copyright (c) 2023, Aaron Clark Diaz.
  *
  * SPDX-License-Identifier: GPL-2.0-only
  */

@@ -1,12 +1,11 @@
 /*
  * Copyright (c) 2019  Pritam Zope
- * Copyright (c) 2021, Aaron Clark Diaz.
+ * Copyright (c) 2023, Aaron Clark Diaz.
  *
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-
-// x86 NASM code generation
+// NASM code generation
 
 #include "log.hpp"
 #include "parser.hpp"
@@ -20,7 +19,7 @@ extern bool optimize;
 extern bool omit_frame_pointer;
 
 namespace xlang {
-	
+
 	int CodeGen::data_type_size(Token tok) {
 		switch (tok.number) {
 			case KEY_VOID:
@@ -38,7 +37,7 @@ namespace xlang {
 				return 0;
 		}
 	}
-	
+
 	int CodeGen::data_decl_size(DeclarationType ds) {
 		switch (ds) {
 			case DB :
@@ -53,7 +52,7 @@ namespace xlang {
 				return 0;
 		}
 	}
-	
+
 	int CodeGen::resv_decl_size(ReservationType rs) {
 		switch (rs) {
 			case RESB:
@@ -68,7 +67,7 @@ namespace xlang {
 				return 0;
 		}
 	}
-	
+
 	DeclarationType CodeGen::declspace_type_size(Token tok) {
 		int sz = data_type_size(tok);
 		switch (sz) {
@@ -84,7 +83,7 @@ namespace xlang {
 				return DSPNONE;
 		}
 	}
-	
+
 	ReservationType CodeGen::resvspace_type_size(Token tok) {
 		int sz = data_type_size(tok);
 		switch (sz) {
@@ -100,7 +99,7 @@ namespace xlang {
 				return RESPNONE;
 		}
 	}
-	
+
 	bool CodeGen::has_float(PrimaryExpression *pexpr) {
 
 		// returns true if any node of primary expression
@@ -110,30 +109,32 @@ namespace xlang {
 		if (pexpr == nullptr)
 			return false;
 		if (pexpr->is_id) {
+
 			if (pexpr->id_info == nullptr)
 				return false;
+
 			if (pexpr->id_info->type_info->type == NodeType::SIMPLE) {
 				type = pexpr->id_info->type_info->type_specifier.simple_type[0];
-				if (type.number == KEY_FLOAT || type.number == KEY_DOUBLE) {
+
+				if (type.number == KEY_FLOAT || type.number == KEY_DOUBLE)
 					return true;
-				} else {
+				else
 					return (has_float(pexpr->left) || has_float(pexpr->right));
-				}
-			} else {
-				return (has_float(pexpr->left) || has_float(pexpr->right));
 			}
-		} else if (pexpr->is_oprtr) {
+			else
+				return (has_float(pexpr->left) || has_float(pexpr->right));
+		}
+		else if (pexpr->is_oprtr)
 			return (has_float(pexpr->left) || has_float(pexpr->right));
-		} else {
-			if (pexpr->tok.number == LIT_FLOAT) {
+		else {
+			if (pexpr->tok.number == LIT_FLOAT)
 				return true;
-			} else {
+			else
 				return (has_float(pexpr->left) || has_float(pexpr->right));
-			}
 		}
 		return false;
 	}
-	
+
 	void CodeGen::max_datatype_size(PrimaryExpression *pexpr, int *dsize) {
 
 		// returns maximum data type size used in primary expression
@@ -154,20 +155,23 @@ namespace xlang {
 				if (*dsize < dsize2) {
 					*dsize = dsize2;
 				}
-			} else {
+			}
+			else {
 				max_datatype_size(pexpr->left, &(*dsize));
 				max_datatype_size(pexpr->right, &(*dsize));
 			}
-		} else if (pexpr->is_oprtr) {
+		}
+		else if (pexpr->is_oprtr) {
 			max_datatype_size(pexpr->left, &(*dsize));
 			max_datatype_size(pexpr->right, &(*dsize));
-		} else {
+		}
+		else {
 			switch (pexpr->tok.number) {
 				case LIT_CHAR :
 					if (*dsize < 1)
 						*dsize = 1;
 					break;
-				
+
 				case LIT_BIN :
 				case LIT_DECIMAL :
 				case LIT_HEX :
@@ -183,7 +187,7 @@ namespace xlang {
 			}
 		}
 	}
-	
+
 	void CodeGen::get_func_local_members() {
 
 		// generate function local members on stack
@@ -212,7 +216,8 @@ namespace xlang {
 							fp = fp - 4;
 							fm.fp_disp = fp;
 							total += 4;
-						} else {
+						}
+						else {
 							fm.insize = data_type_size(syminf->type_info->type_specifier.simple_type[0]);
 							fp = fp - fm.insize;
 							fm.fp_disp = fp;
@@ -235,7 +240,7 @@ namespace xlang {
 		}
 
 		flm.total_size = total;
-		
+
 		// allocate function parameters on stack
 		// fp = 4(ebp) always contain return address
 		// when call invoked.
@@ -253,7 +258,8 @@ namespace xlang {
 						fm.insize = 4;
 						fp = fp + 4;
 						fm.fp_disp = fp;
-					} else {
+					}
+					else {
 						fm.insize = data_type_size(fparam->type_info->type_specifier.simple_type[0]);
 						fp = fp + 4;
 						fm.fp_disp = fp;
@@ -273,17 +279,17 @@ namespace xlang {
 					break;
 			}
 		}
-		
+
 		func_members.insert(std::pair<std::string, LocalMembers>(func_symtab->func_info->func_name, flm));
 	}
-	
-	SymbolInfo *CodeGen::search_func_params(std::string str) {
+
+	SymbolInfo *CodeGen::search_func_params(const std::string &str) {
 
 		//search symbol in function parameters
 
 		if (func_params == nullptr)
 			return nullptr;
-		
+
 		if (func_params->param_list.size() > 0) {
 			for (auto syminf: func_params->param_list) {
 				if (syminf->symbol_info != nullptr) {
@@ -294,11 +300,11 @@ namespace xlang {
 		}
 		return nullptr;
 	}
-	
-	SymbolInfo *CodeGen::search_id(std::string str) {
-		
+
+	SymbolInfo *CodeGen::search_id(const std::string &str) {
+
 		//search in symbol tables, same as in analyze.cpp
-		
+
 		SymbolInfo *syminf = nullptr;
 		if (func_symtab != nullptr) {
 			//search in function symbol table
@@ -311,17 +317,18 @@ namespace xlang {
 					syminf = SymbolTable::search_symbol_node(Compiler::symtab, str);
 				}
 			}
-		} else {
+		}
+		else
 			//if function symbol table null, then search in global symbol table
 			syminf = SymbolTable::search_symbol_node(Compiler::symtab, str);
-		}
+
 		return syminf;
 	}
-	
+
 	InstructionSize CodeGen::get_insn_size_type(int sz) {
-		
+
 		//return Operand sizes used in instructions
-		
+
 		if (sz == 1)
 			return BYTE;
 		else if (sz == 2)
@@ -333,38 +340,36 @@ namespace xlang {
 		else
 			return INSZNONE;
 	}
-	
+
 	std::stack<PrimaryExpression *> CodeGen::get_post_order_prim_expr(PrimaryExpression *pexpr) {
-		
+
 		//get post order of an primary expression tree on stack
 
 		std::stack<PrimaryExpression *> pexp_stack;
 		std::stack<PrimaryExpression *> pexp_out_stack;
 		PrimaryExpression *pexp_root = pexpr, *pexp = nullptr;
-		
+
 		//traverse tree post-orderly and get post order into pexp_out_stack
 		pexp_stack.push(pexp_root);
-		
+
 		while (!pexp_stack.empty()) {
 			pexp = pexp_stack.top();
 			pexp_stack.pop();
 			pexp_out_stack.push(pexp);
 
-			if (pexp->left != nullptr) {
+			if (pexp->left != nullptr)
 				pexp_stack.push(pexp->left);
-			}
 
-			if (pexp->right != nullptr) {
+			if (pexp->right != nullptr)
 				pexp_stack.push(pexp->right);
-			}
 		}
-		
+
 		clear_stack(pexp_stack);
 		return pexp_out_stack;
 	}
-	
+
 	Instruction *CodeGen::get_insn(InstructionType instype, int oprcount) {
-		
+
 		//returns memory allocated instruction pointer
 
 		Instruction *in = insncls->get_insn_mem();
@@ -374,9 +379,9 @@ namespace xlang {
 		in->operand_2->is_array = false;
 		return in;
 	}
-	
-	void CodeGen::insert_comment(std::string cmnt) {
-		
+
+	void CodeGen::insert_comment(const std::string &cmnt) {
+
 		//add new instruction with only comment
 
 		Instruction *in = get_insn(INSNONE, 0);
@@ -385,34 +390,34 @@ namespace xlang {
 		insncls->delete_operand(&(in->operand_2));
 		instructions.push_back(in);
 	}
-	
-	Member *CodeGen::search_data(std::string dt) {
-		
+
+	Member *CodeGen::search_data(const std::string &dt) {
+
 		//search given data in data section vector
 
-		for (Member *d: data_section) {
+		for (Member *d: data_section)
 			if (dt == d->value)
 				return d;
-		}
+
 		return nullptr;
 	}
-	
-	Member *CodeGen::search_string_data(std::string dt) {
-		
+
+	Member *CodeGen::search_string_data(const std::string &dt) {
+
 		//search given data in data section vector
 
 		std::string hstr = get_hex_string(dt);
-		for (Member *d: data_section) {
+		for (Member *d: data_section)
 			if (get_hex_string(dt) == d->value)
 				return d;
-		}
+
 		return nullptr;
 	}
-	
+
 	std::string CodeGen::hex_escape_sequence(char ch) {
-		
+
 		//return escape sequence character hex value in 1 byte
-		
+
 		switch (ch) {
 			case '\'':
 				return "0x27";
@@ -440,16 +445,16 @@ namespace xlang {
 				return "";
 		}
 	}
-	
-	std::string CodeGen::get_hex_string(std::string str) {
-		
+
+	std::string CodeGen::get_hex_string(const std::string &str) {
+
 		//convert string into its hex representation, 1 byte each
 
 		std::string result, esc_seq;
 		size_t len = str.size();
 		std::vector<std::string> vec;
 		size_t index = 0;
-		
+
 		while (index < len) {
 			if (str.at(index) == '\\') {
 				if (index + 1 < len) {
@@ -458,59 +463,65 @@ namespace xlang {
 						result += esc_seq;
 						result.push_back(',');
 						index += 2;
-					} else {
+					}
+					else {
 						result += "0x" + Convert::dec_to_hex(str.at(index));
 						result.push_back(',');
 						result += "0x" + Convert::dec_to_hex(str.at(index + 1));
 						result.push_back(',');
 						index += 2;
 					}
-				} else {
+				}
+				else {
 					result += "0x" + Convert::dec_to_hex(str.at(index));
 					result.push_back(',');
 					index++;
 				}
-			} else {
+			}
+			else {
 				result += "0x" + Convert::dec_to_hex(str.at(index));
 				result.push_back(',');
 				index++;
 			}
 		}
-		
+
 		result = result + "0x00";
 		return result;
 	}
-	
+
 	bool CodeGen::get_function_local_member(FunctionMember *fmemb, Token tok) {
 		funcmem_iterator fmemit;
 		memb_iterator memit;
-		
+
 		if (func_symtab == nullptr) {
 			fmemb->insize = -1;
 			return false;
 		}
-		
+
 		if (tok.number != IDENTIFIER) {
 			fmemb->insize = -1;
 			return false;
 		}
-		
+
 		fmemit = func_members.find(func_symtab->func_info->func_name);
+
 		if (fmemit != func_members.end()) {
+
 			memit = (fmemit->second.members).find(tok.string);
+
 			if (memit != (fmemit->second.members).end()) {
 				fmemb->insize = memit->second.insize;
 				fmemb->fp_disp = memit->second.fp_disp;
 				return true;
-			} else {
-				fmemb->insize = -1;
-				return false;
 			}
+
+			fmemb->insize = -1;
 		}
+
 		return false;
 	}
-	
-	InstructionType CodeGen::get_arthm_op(std::string symbol) {
+
+	InstructionType CodeGen::get_arthm_op(const std::string &symbol) {
 		//get arithmetic instruction type
 
 		if (symbol == "+")
@@ -535,69 +546,80 @@ namespace xlang {
 			return SHR;
 		return INSNONE;
 	}
-	
+
 	RegisterType CodeGen::gen_int_primexp_single_assgn(PrimaryExpression *pexpr, int dtsize) {
-		
+
 		// generate x86 assembly of primary expression
 		// when there is only one node in primary expression
 		// e.g: x = x;
-		
+
 		Instruction *in = nullptr;
 		RegisterType rs = RNONE;
 		SymbolInfo *syminf = nullptr;
+
 		if (pexpr == nullptr)
 			return RNONE;
+
 		FunctionMember fmem;
-		
 		if (dtsize == 1)
 			rs = AL;
 		else if (dtsize == 2)
 			rs = AX;
 		else
 			rs = EAX;
-		
+
 		if (pexpr->left == nullptr && pexpr->right == nullptr) {
+
 			if (pexpr->id_info != nullptr) {
+
 				if (get_function_local_member(&fmem, pexpr->id_info->tok)) {
+
 					in = get_insn(MOV, 2);
 					in->operand_1->type = REGISTER;
 					in->operand_2->type = MEMORY;
 					in->operand_2->mem.mem_type = LOCAL;
+
 					syminf = search_id(pexpr->id_info->symbol);
 					if (syminf != nullptr && syminf->is_ptr) {
-						if(Compiler::global.x64){
+
+						if (Compiler::global.x64) {
 							in->operand_1->reg = RAX;
 							in->operand_2->mem.mem_size = 8;
 						}
-						else{
+						else {
 							in->operand_1->reg = EAX;
 							in->operand_2->mem.mem_size = 4;
 						}
-					} else {
+					}
+					else {
 						in->operand_1->reg = rs;
 						in->operand_2->mem.mem_size = dtsize;
 					}
+
 					in->operand_2->mem.fp_disp = fmem.fp_disp;
 					in->comment = "  ; assignment " + pexpr->id_info->symbol;
 					instructions.push_back(in);
-				} else {
+				}
+				else {
+
 					in = get_insn(MOV, 2);
 					in->operand_1->type = REGISTER;
 					in->operand_1->reg = rs;
 					in->operand_2->type = MEMORY;
 					in->operand_2->mem.mem_type = GLOBAL;
+
 					syminf = search_id(pexpr->id_info->symbol);
 					if (syminf != nullptr && syminf->is_ptr) {
-						if(Compiler::global.x64){
+						if (Compiler::global.x64) {
 							in->operand_1->reg = RAX;
 							in->operand_2->mem.mem_size = 8;
 						}
-						else{
+						else {
 							in->operand_1->reg = EAX;
 							in->operand_2->mem.mem_size = 4;
-						}						
-						
-					} else {
+						}
+					}
+					else {
 						in->operand_1->reg = rs;
 						in->operand_2->mem.mem_size = dtsize;
 					}
@@ -606,7 +628,8 @@ namespace xlang {
 					in->comment = "  ; assignment " + pexpr->id_info->symbol;
 					instructions.push_back(in);
 				}
-			} else {
+			}
+			else {
 				in = get_insn(MOV, 2);
 				in->operand_1->type = REGISTER;
 				in->operand_1->reg = rs;
@@ -618,51 +641,50 @@ namespace xlang {
 		}
 		return RNONE;
 	}
-	
+
 	bool CodeGen::gen_int_primexp_compl(PrimaryExpression *pexpr, int dtsize) {
-		
+
 		// generate bit complement x86 assembly of primary expression
 
 		Instruction *in = nullptr;
 		FunctionMember fmem;
 		if (pexpr == nullptr)
 			return false;
-		
+
 		pexpr = pexpr->unary_node;
-		
 		insert_comment("; line " + std::to_string(pexpr->tok.loc.line));
-		
+
 		if (pexpr->left == nullptr && pexpr->right == nullptr) {
 			if (pexpr->id_info != nullptr) {
+
+				in = get_insn(NEG, 1);
+				insncls->delete_operand(&in->operand_2);
+				in->operand_1->type = MEMORY;
+
 				if (get_function_local_member(&fmem, pexpr->id_info->tok)) {
-					in = get_insn(NEG, 1);
-					insncls->delete_operand(&in->operand_2);
-					in->operand_1->type = MEMORY;
 					in->operand_1->mem.mem_type = LOCAL;
 					in->operand_1->mem.mem_size = dtsize;
 					in->operand_1->mem.fp_disp = fmem.fp_disp;
 					in->comment = "  ; " + pexpr->id_info->symbol;
-					instructions.push_back(in);
-				} else {
-					in = get_insn(NEG, 1);
-					insncls->delete_operand(&in->operand_2);
-					in->operand_1->type = MEMORY;
+				}
+				else {
 					in->operand_1->mem.mem_type = GLOBAL;
 					in->operand_1->mem.mem_size = dtsize;
 					in->operand_1->mem.name = pexpr->id_info->symbol;
 					in->comment = "  ; " + pexpr->id_info->symbol;
-					instructions.push_back(in);
 				}
+
+				instructions.push_back(in);
 			}
 			return true;
 		}
 		return false;
 	}
-	
-	Member *CodeGen::create_string_data(std::string value) {
-		
+
+	Member *CodeGen::create_string_data(const std::string &value) {
+
 		//create new data in data section with string
-		
+
 		Member *dt = insncls->get_data_mem();
 		dt->symbol = "string_val" + std::to_string(string_data_count);
 		dt->type = DB;
@@ -672,7 +694,7 @@ namespace xlang {
 		string_data_count++;
 		return dt;
 	}
-	
+
 	RegisterType CodeGen::gen_string_literal_primary_expr(PrimaryExpression *pexpr) {
 
 		// generate string literal x86 assembly
@@ -687,11 +709,11 @@ namespace xlang {
 					dt = create_string_data(pexpr->tok.string);
 					data_section.push_back(dt);
 				}
-				
+
 				Instruction *in = get_insn(MOV, 2);
 				in->operand_1->type = REGISTER;
-						
-				if(Compiler::global.x64)
+
+				if (Compiler::global.x64)
 					in->operand_1->reg = RAX;
 				else
 					in->operand_1->reg = EAX;
@@ -702,7 +724,7 @@ namespace xlang {
 				in->operand_2->mem.name = dt->symbol;
 				instructions.push_back(in);
 
-				if(Compiler::global.x64)
+				if (Compiler::global.x64)
 					return RAX;
 				else
 					return EAX;
@@ -710,11 +732,11 @@ namespace xlang {
 		}
 		return RNONE;
 	}
-	
+
 	RegisterType CodeGen::gen_int_primary_expr(PrimaryExpression *pexpr) {
-		
+
 		// generate int type x86 assembly of primary expression
-		
+
 		std::stack<PrimaryExpression *> pexp_stack;
 		std::stack<PrimaryExpression *> pexp_out_stack;
 		PrimaryExpression *pexp = nullptr, *fact1 = nullptr, *fact2 = nullptr;
@@ -727,7 +749,7 @@ namespace xlang {
 		FunctionMember fmem;
 		std::stack<RegisterType> result;
 		std::set<PrimaryExpression *> common_node_set;
-		
+
 		if (pexpr == nullptr)
 			return RNONE;
 
@@ -742,63 +764,50 @@ namespace xlang {
 					return RNONE;
 			}
 		}
-		
+
 		//check for string type primary Expression
 		r1 = gen_string_literal_primary_expr(pexpr);
 		if (r1 != RNONE)
 			return r1;
-		
+
 		if (dtsize <= 0)
 			return RNONE;
-		
+
 		insert_comment("; line " + std::to_string(pexpr->tok.loc.line));
-		
+
 		//if only one node in primary Expression
 		r1 = gen_int_primexp_single_assgn(pexpr, dtsize);
 		if (r1 != RNONE) {
 			return r1;
 		}
-		
+
 		pexp_out_stack = get_post_order_prim_expr(pexpr);
-		
+
 		//cleraing out registers eax and edx for arithmetic operations
 		in = get_insn(XOR, 2);
+
 		in->operand_1->type = REGISTER;
-		
-		if(Compiler::global.x64)
-			in->operand_1->reg = RAX;
-		else
-			in->operand_1->reg = EAX;
+		Compiler::global.x64 ? in->operand_1->reg = RAX : in->operand_1->reg = EAX;
 
 		in->operand_2->type = REGISTER;
-		if(Compiler::global.x64)
-			in->operand_2->reg = RAX;
-		else
-			in->operand_2->reg = EAX;
+		Compiler::global.x64 ? in->operand_2->reg = RAX : in->operand_2->reg = EAX;
 
 		instructions.push_back(in);
+
 		in = get_insn(XOR, 2);
 		in->operand_1->type = REGISTER;
 
-		if(Compiler::global.x64)
-			in->operand_1->reg = RDX;
-		else
-			in->operand_1->reg = EDX;
-
+		Compiler::global.x64 ? in->operand_1->reg = RDX : in->operand_1->reg = EDX;
 		in->operand_2->type = REGISTER;
 
-		if(Compiler::global.x64)
-			in->operand_2->reg = RDX;
-		else
-			in->operand_2->reg = EDX;
-
+		Compiler::global.x64 ? in->operand_2->reg = RDX : in->operand_2->reg = EDX;
 		instructions.push_back(in);
-		
+
 		while (!pexp_out_stack.empty()) {
 			pexp = pexp_out_stack.top();
 			if (pexp->is_oprtr) {
 				stsize = pexp_stack.size();
-				
+
 				//generate code when common-subexpression node found after optimization
 				if (common_node_set.find(pexp) != common_node_set.end()) {
 					if (stsize >= 2) {
@@ -810,10 +819,10 @@ namespace xlang {
 						push_count = 0;
 						continue;
 					}
-				} 
-                else 
+				}
+				else
 					common_node_set.insert(pexp);
-								
+
 				if (stsize >= 2 && push_count > 1) {
 
 					r1 = reg->allocate_register(dtsize);
@@ -822,7 +831,7 @@ namespace xlang {
 					pexp_stack.pop();
 					fact1 = pexp_stack.top();
 					pexp_stack.pop();
-					
+
 					//store previous calculated result on stack
 					if (result.size() > 0) {
 						in = get_insn(PUSH, 1);
@@ -835,10 +844,11 @@ namespace xlang {
 						reg->free_register(r2);
 						r1 = reg->allocate_register(dtsize);
 					}
-					
+
+					in = get_insn(MOV, 2);
+
 					//if literal
 					if (!fact1->is_id) {
-						in = get_insn(MOV, 2);
 						in->operand_1->type = REGISTER;
 						in->operand_1->reg = r1;
 						in->operand_2->type = LITERAL;
@@ -846,14 +856,14 @@ namespace xlang {
 						instructions.push_back(in);
 						in = nullptr;
 						result.push(r1);
-						
-					} else {
+					}
+					else {
 						//if identifier
+						in->operand_1->type = REGISTER;
+						in->operand_1->reg = r1;
+						in->operand_2->type = MEMORY;
+
 						if (get_function_local_member(&fmem, fact1->id_info->tok)) {
-							in = get_insn(MOV, 2);
-							in->operand_1->type = REGISTER;
-							in->operand_1->reg = r1;
-							in->operand_2->type = MEMORY;
 							in->operand_2->mem.mem_type = LOCAL;
 							in->operand_2->mem.mem_size = dtsize;
 							in->operand_2->mem.fp_disp = fmem.fp_disp;
@@ -861,11 +871,9 @@ namespace xlang {
 							instructions.push_back(in);
 							in = nullptr;
 							result.push(r1);
-						} else {
+						}
+						else {
 							in = get_insn(MOV, 2);
-							in->operand_1->type = REGISTER;
-							in->operand_1->reg = r1;
-							in->operand_2->type = MEMORY;
 							in->operand_2->mem.mem_type = GLOBAL;
 							in->operand_2->mem.mem_size = dtsize;
 							in->operand_2->mem.name = fact1->id_info->symbol;
@@ -875,44 +883,42 @@ namespace xlang {
 							result.push(r1);
 						}
 					}
-					
+
 					//get arithmetic operator instruction
 					op = get_arthm_op(pexp->tok.string);
-					
+
 					if (!fact2->is_id) {
-						
+
 						if (op != SHL || op != SHR) {
 							in = get_insn(MOV, 2);
 							in->operand_1->type = REGISTER;
 							in->operand_1->reg = r2;
 							in->operand_2->type = LITERAL;
 
-							if (fact1->id_info != nullptr && fact1->id_info->is_ptr) 
+							if (fact1->id_info != nullptr && fact1->id_info->is_ptr)
 								in->operand_2->literal = std::to_string(Convert::tok_to_decimal(fact2->tok) * 4);
-							else 
+							else
 								in->operand_2->literal = fact2->tok.string;
-							
+
 							instructions.push_back(in);
 							in = nullptr;
 						}
-					} 
-                    else {
+					}
+					else {
+						in = get_insn(MOV, 2);
+						in->operand_1->type = REGISTER;
+						in->operand_1->reg = r2;
+						in->operand_2->type = MEMORY;
+
 						if (get_function_local_member(&fmem, fact2->id_info->tok)) {
-							in = get_insn(MOV, 2);
-							in->operand_1->type = REGISTER;
-							in->operand_1->reg = r2;
-							in->operand_2->type = MEMORY;
 							in->operand_2->mem.mem_type = LOCAL;
 							in->operand_2->mem.mem_size = dtsize;
 							in->operand_2->mem.fp_disp = fmem.fp_disp;
 							in->comment = "  ; " + fact2->id_info->symbol;
 							instructions.push_back(in);
 							in = nullptr;
-						} else {
-							in = get_insn(MOV, 2);
-							in->operand_1->type = REGISTER;
-							in->operand_1->reg = r2;
-							in->operand_2->type = MEMORY;
+						}
+						else {
 							in->operand_2->mem.mem_type = GLOBAL;
 							in->operand_2->mem.mem_size = dtsize;
 							in->operand_2->mem.name = fact2->id_info->symbol;
@@ -921,9 +927,9 @@ namespace xlang {
 							in = nullptr;
 						}
 					}
-					
+
 					reg->free_register(r2);
-					
+
 					if (op == MUL || op == DIV) {
 						in = get_insn(op, 1);
 						in->operand_1->type = REGISTER;
@@ -940,10 +946,12 @@ namespace xlang {
 							if (dtsize == 1) {
 								in->operand_1->reg = AL;
 								in->operand_2->reg = DL;
-							} else if (dtsize == 2) {
+							}
+							else if (dtsize == 2) {
 								in->operand_1->reg = AX;
 								in->operand_2->reg = DX;
-							} else if (dtsize == 4) {
+							}
+							else if (dtsize == 4) {
 								in->operand_1->reg = EAX;
 								in->operand_2->reg = EDX;
 							}
@@ -956,7 +964,8 @@ namespace xlang {
 							instructions.push_back(in);
 							in = nullptr;
 						}
-					} else if (op == SHL || op == SHR) {
+					}
+					else if (op == SHL || op == SHR) {
 						in = get_insn(op, 2);
 						in->operand_1->type = REGISTER;
 						in->operand_1->reg = r1;
@@ -964,7 +973,8 @@ namespace xlang {
 						in->operand_2->literal = fact2->tok.string;
 						instructions.push_back(in);
 						in = nullptr;
-					} else {
+					}
+					else {
 						in = get_insn(op, 2);
 						in->operand_1->type = REGISTER;
 						in->operand_1->reg = r1;
@@ -973,7 +983,8 @@ namespace xlang {
 						instructions.push_back(in);
 						in = nullptr;
 					}
-				} else if (stsize >= 1) {
+				}
+				else if (stsize >= 1) {
 					r2 = reg->allocate_register(dtsize);
 					fact1 = pexp_stack.top();
 					pexp_stack.pop();
@@ -983,68 +994,72 @@ namespace xlang {
 						in->operand_1->reg = r2;
 						in->operand_2->type = LITERAL;
 						in->operand_2->literal = fact1->tok.string;
-						instructions.push_back(in);
-						in = nullptr;
-					} else {
+					}
+					else {
+
+						in = get_insn(MOV, 2);
+						in->operand_1->type = REGISTER;
+						in->operand_1->reg = r2;
+						in->operand_2->type = MEMORY;
+
 						if (get_function_local_member(&fmem, fact1->id_info->tok)) {
-							in = get_insn(MOV, 2);
-							in->operand_1->type = REGISTER;
-							in->operand_1->reg = r2;
-							in->operand_2->type = MEMORY;
 							in->operand_2->mem.mem_type = LOCAL;
 							in->operand_2->mem.mem_size = dtsize;
 							in->operand_2->mem.fp_disp = fmem.fp_disp;
-							in->comment = "  ; " + fact1->id_info->symbol;
-							instructions.push_back(in);
-							in = nullptr;
-						} else {
-							in = get_insn(MOV, 2);
-							in->operand_1->type = REGISTER;
-							in->operand_1->reg = r2;
-							in->operand_2->type = MEMORY;
+						}
+						else {
 							in->operand_2->mem.mem_type = GLOBAL;
 							in->operand_2->mem.mem_size = dtsize;
 							in->operand_2->mem.name = fact1->id_info->symbol;
-							in->comment = "  ; " + fact1->id_info->symbol;
-							instructions.push_back(in);
-							in = nullptr;
 						}
+
+						in->comment = "  ; " + fact1->id_info->symbol;
 					}
-					
+
+					instructions.push_back(in);
+					in = nullptr;
 					reg->free_register(r2);
-					
+
 					op = get_arthm_op(pexp->tok.string);
 					if (op == MUL || op == DIV) {
+
 						in = get_insn(op, 1);
 						in->operand_1->type = REGISTER;
 						in->operand_1->reg = r2;
 						insncls->delete_operand(&in->operand_2);
 						instructions.push_back(in);
 						in = nullptr;
+
 						//if Token == %
 						if (pexp->tok.number == ARTHM_MOD) {
+
 							in = get_insn(MOV, 2);
 							in->operand_1->type = REGISTER;
 							in->operand_2->type = REGISTER;
+
 							if (dtsize == 1) {
 								in->operand_1->reg = AL;
 								in->operand_2->reg = DL;
-							} else if (dtsize == 2) {
+							}
+							else if (dtsize == 2) {
 								in->operand_1->reg = AX;
 								in->operand_2->reg = DX;
-							} else if (dtsize == 4) {
+							}
+							else if (dtsize == 4) {
 								in->operand_1->reg = EAX;
 								in->operand_2->reg = EDX;
 							}
 							else if (dtsize == 8) {
 								in->operand_1->reg = RAX;
 								in->operand_2->reg = RDX;
-							}							
+							}
+
 							in->comment = "  ; copy % result";
 							instructions.push_back(in);
 							in = nullptr;
 						}
-					} else {
+					}
+					else {
 						in = get_insn(op, 2);
 						in->operand_1->type = REGISTER;
 						in->operand_1->reg = r1;
@@ -1053,13 +1068,14 @@ namespace xlang {
 						instructions.push_back(in);
 						in = nullptr;
 					}
-				} else {
+				}
+				else {
 					RegisterType _tr1;
 					if (!result.empty()) {
 						_tr1 = result.top();
 						result.pop();
 					}
-					
+
 					in = get_insn(MOV, 2);
 					in->operand_1->type = REGISTER;
 					auto szreg = [=](int sz) {
@@ -1077,7 +1093,7 @@ namespace xlang {
 					in->comment = "   ; copy result to register";
 					instructions.push_back(in);
 					in = nullptr;
-					
+
 					if (push_count > 0) {
 						in = get_insn(POP, 1);
 						in->operand_1->type = REGISTER;
@@ -1088,7 +1104,7 @@ namespace xlang {
 						in = nullptr;
 						push_count--;
 					}
-					
+
 					op = get_arthm_op(pexp->tok.string);
 					if (op == MUL || op == DIV) {
 						in = get_insn(op, 1);
@@ -1105,10 +1121,12 @@ namespace xlang {
 							if (dtsize == 1) {
 								in->operand_1->reg = AL;
 								in->operand_2->reg = DL;
-							} else if (dtsize == 2) {
+							}
+							else if (dtsize == 2) {
 								in->operand_1->reg = AX;
 								in->operand_2->reg = DX;
-							} else if (dtsize == 4) {
+							}
+							else if (dtsize == 4) {
 								in->operand_1->reg = EAX;
 								in->operand_2->reg = EDX;
 							}
@@ -1121,7 +1139,8 @@ namespace xlang {
 							instructions.push_back(in);
 							in = nullptr;
 						}
-					} else {
+					}
+					else {
 						in = get_insn(op, 2);
 						in->operand_1->type = REGISTER;
 						in->operand_1->reg = _tr1;
@@ -1131,7 +1150,8 @@ namespace xlang {
 						in = nullptr;
 					}
 				}
-			} else {
+			}
+			else {
 				push_count++;
 				pexp_stack.push(pexp);
 			}
@@ -1139,13 +1159,13 @@ namespace xlang {
 			op = INSNONE;
 			pexp_out_stack.pop();
 		}
-		
+
 		common_node_set.clear();
 		return r1;
 	}
-	
-	InstructionType CodeGen::get_farthm_op(std::string symbol, bool reverse_ins) {
-		
+
+	InstructionType CodeGen::get_farthm_op(const std::string &symbol, bool reverse_ins) {
+
 		//return float arithmetic instruction types
 
 		if (symbol == "+")
@@ -1158,15 +1178,15 @@ namespace xlang {
 			return (reverse_ins ? FDIVR : FDIV);
 		return INSNONE;
 	}
-	
-	Member *CodeGen::create_float_data(DeclarationType ds, std::string value) {
-		
+
+	Member *CodeGen::create_float_data(DeclarationType ds, const std::string &value) {
+
 		//create float data in data section
 
 		Member *dt = search_data(value);
 		if (dt != nullptr)
 			return dt;
-		
+
 		dt = insncls->get_data_mem();
 		dt->symbol = "float_val" + std::to_string(float_data_count);
 		dt->type = ds;
@@ -1175,7 +1195,7 @@ namespace xlang {
 		float_data_count++;
 		return dt;
 	}
-	
+
 	FloatRegisterType CodeGen::gen_float_primexp_single_assgn(PrimaryExpression *pexpr, DeclarationType decsp) {
 
 		Instruction *in = nullptr;
@@ -1184,7 +1204,7 @@ namespace xlang {
 		FunctionMember fmem;
 		if (pexpr == nullptr)
 			return FRNONE;
-		
+
 		if (pexpr->left == nullptr && pexpr->right == nullptr) {
 			if (!pexpr->is_id) {
 				dt = create_float_data(decsp, pexpr->tok.string);
@@ -1194,38 +1214,37 @@ namespace xlang {
 				in->operand_1->mem.mem_size = data_decl_size(decsp);
 				in->operand_1->mem.name = dt->symbol;
 				in->comment = "  ; " + pexpr->tok.string;
-				insncls->delete_operand(&(in->operand_2));
-				instructions.push_back(in);
-			} else {
+			}
+			else {
+
+				in = get_insn(FLD, 1);
+				in->operand_1->type = MEMORY;
+
 				if (get_function_local_member(&fmem, pexpr->id_info->tok)) {
-					in = get_insn(FLD, 1);
-					in->operand_1->type = MEMORY;
 					in->operand_1->mem.mem_type = LOCAL;
 					in->operand_1->mem.mem_size = data_decl_size(decsp);
 					in->operand_1->mem.fp_disp = fmem.fp_disp;
-					insncls->delete_operand(&(in->operand_2));
-					instructions.push_back(in);
-				} else {
-					in = get_insn(FLD, 1);
-					in->operand_1->type = MEMORY;
+				}
+				else {
 					in->operand_1->mem.mem_type = GLOBAL;
 					in->operand_1->mem.mem_size = data_decl_size(decsp);
 					in->operand_1->mem.name = pexpr->id_info->symbol;
-					insncls->delete_operand(&(in->operand_2));
-					instructions.push_back(in);
 				}
 			}
-			
+
+			insncls->delete_operand(&(in->operand_2));
+			instructions.push_back(in);
 			return rs;
 		}
+
 		return FRNONE;
 	}
-	
+
 	void CodeGen::gen_float_primary_expr(PrimaryExpression *pexpr) {
- 
+
 		// generate float type x86 assembly of primary expression
 		// generator does not store previous calculated result here
- 
+
 		std::stack<PrimaryExpression *> pexp_stack;
 		std::stack<PrimaryExpression *> pexp_out_stack;
 		PrimaryExpression *pexp = nullptr, *fact1 = nullptr, *fact2 = nullptr;
@@ -1238,28 +1257,28 @@ namespace xlang {
 		Member *dt = nullptr;
 		DeclarationType decsp = DSPNONE;
 		FunctionMember fmem;
-		
+
 		if (pexpr == nullptr)
 			return;
 
 		max_datatype_size(pexpr, &dtsize);
-		
+
 		if (dtsize <= 0)
 			return;
-		
+
 		if (dtsize == 4)
 			decsp = DD;
 		else if (dtsize == 8)
 			decsp = DQ;
-		
+
 		insert_comment("; line " + std::to_string(pexpr->tok.loc.line));
-		
+
 		r1 = gen_float_primexp_single_assgn(pexpr, decsp);
 		if (r1 != FRNONE)
 			return;
-		
+
 		pexp_out_stack = get_post_order_prim_expr(pexpr);
-		
+
 		while (!pexp_out_stack.empty()) {
 			pexp = pexp_out_stack.top();
 			if (pexp->is_oprtr) {
@@ -1271,7 +1290,7 @@ namespace xlang {
 					pexp_stack.pop();
 					fact1 = pexp_stack.top();
 					pexp_stack.pop();
-					
+
 					if (!fact1->is_id) {
 						dt = create_float_data(decsp, fact1->tok.string);
 						in = get_insn(FLD, 1);
@@ -1284,7 +1303,8 @@ namespace xlang {
 						instructions.push_back(in);
 						in = nullptr;
 						dt = nullptr;
-					} else {
+					}
+					else {
 						if (get_function_local_member(&fmem, fact1->id_info->tok)) {
 							in = get_insn(FLD, 1);
 							in->operand_1->type = MEMORY;
@@ -1295,7 +1315,8 @@ namespace xlang {
 							insncls->delete_operand(&(in->operand_2));
 							instructions.push_back(in);
 							in = nullptr;
-						} else {
+						}
+						else {
 							in = get_insn(FLD, 1);
 							in->operand_1->type = MEMORY;
 							in->operand_1->mem.mem_type = GLOBAL;
@@ -1307,7 +1328,7 @@ namespace xlang {
 							in = nullptr;
 						}
 					}
-					
+
 					if (!fact2->is_id) {
 						dt = create_float_data(decsp, fact2->tok.string);
 						in = get_insn(FLD, 1);
@@ -1320,32 +1341,31 @@ namespace xlang {
 						instructions.push_back(in);
 						in = nullptr;
 						dt = nullptr;
-					} else {
+					}
+					else {
+
+						in = get_insn(FLD, 1);
+						in->operand_1->type = MEMORY;
+
 						if (get_function_local_member(&fmem, fact2->id_info->tok)) {
-							in = get_insn(FLD, 1);
-							in->operand_1->type = MEMORY;
 							in->operand_1->mem.mem_type = LOCAL;
 							in->operand_1->mem.mem_size = dtsize;
 							in->operand_1->mem.fp_disp = fmem.fp_disp;
-							in->comment = "  ; " + fact2->id_info->symbol;
-							insncls->delete_operand(&(in->operand_2));
-							instructions.push_back(in);
-							in = nullptr;
-						} else {
-							in = get_insn(FLD, 1);
-							in->operand_1->type = MEMORY;
+						}
+						else {
 							in->operand_1->mem.mem_type = GLOBAL;
 							in->operand_1->mem.mem_size = dtsize;
 							in->operand_1->mem.name = fact2->id_info->symbol;
-							in->comment = "  ; " + fact2->id_info->symbol;
-							insncls->delete_operand(&(in->operand_2));
-							instructions.push_back(in);
-							in = nullptr;
 						}
+
+						in->comment = "  ; " + fact2->id_info->symbol;
+						insncls->delete_operand(&(in->operand_2));
+						instructions.push_back(in);
+						in = nullptr;
 					}
-					
+
 					reg->free_float_register(r2);
-					
+
 					op = get_farthm_op(pexp->tok.string, false);
 					in = get_insn(op, 1);
 					in->operand_1->type = FREGISTER;
@@ -1355,10 +1375,12 @@ namespace xlang {
 					in = nullptr;
 					push_count = 0;
 
-				} else if (stsize >= 1) {
+				}
+				else if (stsize >= 1) {
 					r2 = reg->allocate_float_register();
 					fact1 = pexp_stack.top();
 					pexp_stack.pop();
+
 					if (!fact1->is_id) {
 						dt = create_float_data(decsp, fact1->tok.string);
 						in = get_insn(FLD, 1);
@@ -1371,7 +1393,8 @@ namespace xlang {
 						instructions.push_back(in);
 						in = nullptr;
 						dt = nullptr;
-					} else {
+					}
+					else {
 						if (get_function_local_member(&fmem, fact1->id_info->tok)) {
 							in = get_insn(FLD, 1);
 							in->operand_1->type = MEMORY;
@@ -1382,7 +1405,8 @@ namespace xlang {
 							insncls->delete_operand(&(in->operand_2));
 							instructions.push_back(in);
 							in = nullptr;
-						} else {
+						}
+						else {
 							in = get_insn(FLD, 1);
 							in->operand_1->type = MEMORY;
 							in->operand_1->mem.mem_type = GLOBAL;
@@ -1394,7 +1418,7 @@ namespace xlang {
 							in = nullptr;
 						}
 					}
-					
+
 					op = get_farthm_op(pexp->tok.string, true);
 					in = get_insn(op, 1);
 					in->operand_1->type = FREGISTER;
@@ -1405,17 +1429,18 @@ namespace xlang {
 					push_count = 0;
 					reg->free_float_register(r2);
 				}
-			} else {
+			}
+			else {
 				push_count++;
 				pexp_stack.push(pexp);
 			}
 			op = INSNONE;
 			pexp_out_stack.pop();
 		}
-		
+
 		reg->free_float_register(r1);
 	}
-	
+
 	std::pair<int, int> CodeGen::gen_primary_expr(PrimaryExpression **pexpr) {
 
 		// return pair as result of an primary expression
@@ -1426,15 +1451,16 @@ namespace xlang {
 		RegisterType result;
 		std::pair<int, int> pr(-1, -1);
 		PrimaryExpression *pexpr2 = *pexpr;
-		
+
 		if (pexpr2 == nullptr)
 			return pr;
-		
+
 		if (has_float(pexpr2)) {
 			gen_float_primary_expr(pexpr2);
 			pr.first = 2;
 			pr.second = static_cast<int>(ST0);
-		} else {
+		}
+		else {
 			result = gen_int_primary_expr(pexpr2);
 			reg->free_register(result);
 			pr.first = 1;
@@ -1442,9 +1468,9 @@ namespace xlang {
 		}
 		return pr;
 	}
-	
+
 	void CodeGen::gen_assgn_primary_expr(AssignmentExpression **asexpr) {
-		
+
 		//generate x86 assembly for assignment of primary expression
 		//e.g: x = 1 + 2 *3 ;
 
@@ -1455,20 +1481,20 @@ namespace xlang {
 		IdentifierExpression *left = nullptr;
 		FunctionMember fmem;
 		Token type;
-		
+
 		if (assgnexp == nullptr)
 			return;
 
 		if (assgnexp->id_expr == nullptr)
 			return;
-		
+
 		left = assgnexp->id_expr;
 		if (left->unary != nullptr)
 			left = left->unary;
-		
+
 		//generate primary expression & get its result
 		pexp_result = gen_primary_expr(&(assgnexp->expression->primary_expr));
-		
+
 		if (pexp_result.first == -1)
 			return;
 
@@ -1477,11 +1503,11 @@ namespace xlang {
 
 		if (left->id_info->type_info == nullptr)
 			return;
-		
+
 		if (get_function_local_member(&fmem, left->id_info->tok)) {
 			type = left->id_info->type_info->type_specifier.simple_type[0];
 			dtsize = data_type_size(type);
-			
+
 			in = get_insn(MOV, 2);
 			in->operand_1->type = MEMORY;
 			in->operand_1->mem.mem_type = LOCAL;
@@ -1491,14 +1517,15 @@ namespace xlang {
 			if (pexp_result.first == 1) {
 				in->operand_2->type = REGISTER;
 
-				if (dtsize == 1) 
+				if (dtsize == 1)
 					res = static_cast<int>(AL);
-				else if (dtsize == 2) 
+				else if (dtsize == 2)
 					res = static_cast<int>(AX);
-				
+
 				in->operand_2->reg = static_cast<RegisterType>(res);
 				in->operand_1->mem.mem_size = reg->regsize(static_cast<RegisterType>(res));
-			} else if (pexp_result.first == 2) {
+			}
+			else if (pexp_result.first == 2) {
 				//if floating type, result store in st0
 				in->operand_count = 1;
 				in->insn_type = FSTP;
@@ -1508,24 +1535,25 @@ namespace xlang {
 
 			instructions.push_back(in);
 			in = nullptr;
-		} else {
+		}
+		else {
 			type = left->id_info->type_info->type_specifier.simple_type[0];
 			dtsize = data_type_size(type);
-			
+
 			in = get_insn(MOV, 2);
 			in->operand_1->type = MEMORY;
 			in->operand_1->mem.mem_type = GLOBAL;
 			in->operand_1->mem.mem_size = dtsize;
 			in->operand_1->mem.name = left->id_info->symbol;
-			
+
 			if (left->is_subscript) {
 				in->operand_1->is_array = true;
 				Token sb = *(left->subscript.begin());
 				if (is_literal(sb)) {
 					in->operand_1->mem.fp_disp = Convert::tok_to_decimal(sb) * dtsize;
 					in->operand_1->reg = RNONE;
-				} 
-                else {
+				}
+				else {
 					FunctionMember fmem2;
 					Instruction *in2 = nullptr;
 					auto indexreg = [=](int sz) {
@@ -1535,150 +1563,123 @@ namespace xlang {
 							return CX;
 						else if (sz == 4)
 							return ECX;
-                        else
-                            return RCX;
+						else
+							return RCX;
 					};
 
 					//clearing out index register ecx
 					in2 = get_insn(XOR, 2);
-					in2->operand_1->type = REGISTER;
 
-					if(Compiler::global.x64)
-						in2->operand_1->reg = RCX;
-					else
-						in2->operand_1->reg = ECX;
+					in2->operand_1->type = REGISTER;
+					Compiler::global.x64 ? in2->operand_1->reg = RCX : in2->operand_1->reg = ECX;
 
 					in2->operand_2->type = REGISTER;
-
-					if(Compiler::global.x64)
-						in2->operand_2->reg = RCX;
-					else
-						in2->operand_2->reg = ECX;
+					Compiler::global.x64 ? in2->operand_2->reg = RCX : in2->operand_2->reg = ECX;
 
 					instructions.push_back(in2);
 					in2 = nullptr;
 
+					in2 = get_insn(MOV, 2);
+					in2->operand_1->type = REGISTER;
+					in2->operand_1->reg = indexreg(dtsize);
+					in2->operand_2->type = MEMORY;
+
 					if (get_function_local_member(&fmem2, sb)) {
-						in2 = get_insn(MOV, 2);
-						in2->operand_1->type = REGISTER;
-						in2->operand_1->reg = indexreg(dtsize);
-						in2->operand_2->type = MEMORY;
 						in2->operand_2->mem.mem_type = LOCAL;
 						in2->operand_2->mem.mem_size = dtsize;
 						in2->operand_2->mem.fp_disp = fmem2.fp_disp;
 						instructions.push_back(in2);
-
-						if(Compiler::global.x64)
-							in->operand_1->reg = RCX;
-						else
-							in->operand_1->reg = ECX;
-
-						in->operand_1->arr_disp = dtsize;
-					} else {
-						in2 = get_insn(MOV, 2);
-						in2->operand_1->type = REGISTER;
-						in2->operand_1->reg = indexreg(dtsize);
-						in2->operand_2->type = MEMORY;
+					}
+					else {
 						in2->operand_2->mem.mem_type = GLOBAL;
 						in2->operand_2->mem.mem_size = dtsize;
 						in2->operand_2->mem.name = sb.string;
 						instructions.push_back(in2);
-
-						if(Compiler::global.x64)
-							in->operand_1->reg = RCX;
-						else
-							in->operand_1->reg = ECX;
-						
-						in->operand_1->arr_disp = dtsize;
 					}
+
+					Compiler::global.x64 ? in->operand_1->reg = RCX : in->operand_1->reg = ECX;
+					in->operand_1->arr_disp = dtsize;
 				}
 			}
 
 			if (pexp_result.first == 1) {
 				in->operand_2->type = REGISTER;
 				int res = pexp_result.second;
-				
-				if (dtsize == 1) 
+
+				if (dtsize == 1)
 					res = static_cast<int>(AL);
-				else if (dtsize == 2) 
+				else if (dtsize == 2)
 					res = static_cast<int>(AX);
-				
+
 				in->operand_2->reg = static_cast<RegisterType>(res);
 				in->operand_1->mem.mem_size = reg->regsize(static_cast<RegisterType>(res));
-			} else if (pexp_result.first == 2) {
+			}
+			else if (pexp_result.first == 2) {
 				in->operand_count = 1;
 				in->insn_type = FSTP;
 				in->operand_1->mem.mem_size = dtsize;
 				insncls->delete_operand(&(in->operand_2));
 			}
+
 			instructions.push_back(in);
 			in = nullptr;
 		}
 	}
-	
+
 	void CodeGen::gen_sizeof_expr(SizeOfExpression **sofexpr) {
-		
+
 		// generate sizeof expression
 		// by calculating size of an type
 		// and aasigning it to EAX register
 
 		SizeOfExpression *szofnexp = *sofexpr;
 		Instruction *in = nullptr;
-		
+
 		if (szofnexp == nullptr)
 			return;
-		
+
 		if (szofnexp->is_simple_type) {
 			insert_comment("; line " + std::to_string(szofnexp->simple_type[0].loc.line));
 			in = get_insn(MOV, 2);
-			in->operand_1->type = REGISTER;
 
-			if(Compiler::global.x64)
-				in->operand_1->reg = RAX;
-			else
-				in->operand_1->reg = EAX;
-			
+			in->operand_1->type = REGISTER;
+			Compiler::global.x64 ? in->operand_1->reg = RAX : in->operand_1->reg = EAX;
+
 			in->operand_2->type = LITERAL;
 			in->comment = "    ;  sizeof " + szofnexp->simple_type[0].string;
+
 			if (szofnexp->is_ptr) {
-                if(Compiler::global.x64)
-				    in->operand_2->literal = "8";
-                else
-                    in->operand_2->literal = "4";
+				Compiler::global.x64 ? in->operand_2->literal = "8" : in->operand_2->literal = "4";
 				in->comment += " pointer";
-			} else {
-				in->operand_2->literal = std::to_string(data_type_size(szofnexp->simple_type[0]));
 			}
+			else
+				in->operand_2->literal = std::to_string(data_type_size(szofnexp->simple_type[0]));
+
 			instructions.push_back(in);
-		} else {
+		}
+		else {
 			insert_comment("; line " + std::to_string(szofnexp->identifier.loc.line));
 			in = get_insn(MOV, 2);
 			in->operand_1->type = REGISTER;
 
-			if(Compiler::global.x64)
-				in->operand_1->reg = RAX;
-			else
-				in->operand_1->reg = EAX;
-			
+			Compiler::global.x64 ? in->operand_1->reg = RAX : in->operand_1->reg = EAX;
 			in->operand_2->type = LITERAL;
 			in->comment = "    ;  sizeof " + szofnexp->identifier.string;
 
 			if (szofnexp->is_ptr) {
-                if(Compiler::global.x64)
-				    in->operand_2->literal = "8";
-                else
-                    in->operand_2->literal = "4";
+				Compiler::global.x64 ? in->operand_2->literal = "8" : in->operand_2->literal = "4";
 				in->comment += " pointer";
-			} else {
+			}
+			else {
 				std::unordered_map<std::string, int>::iterator it;
 				it = record_sizes.find(szofnexp->identifier.string);
-				if (it != record_sizes.end()) 
+				if (it != record_sizes.end())
 					in->operand_2->literal = std::to_string(it->second);
 			}
 			instructions.push_back(in);
 		}
 	}
-	
+
 	void CodeGen::gen_assgn_sizeof_expr(AssignmentExpression **asexpr) {
 
 		AssignmentExpression *assgnexp = *asexpr;
@@ -1687,84 +1688,68 @@ namespace xlang {
 		IdentifierExpression *left = nullptr;
 		Token type;
 		FunctionMember fmem;
-		
+
 		if (assgnexp == nullptr)
 			return;
 		if (assgnexp->id_expr == nullptr)
 			return;
-		
+
 		left = assgnexp->id_expr;
 		if (left->unary != nullptr)
 			left = left->unary;
-		
+
 		gen_sizeof_expr(&assgnexp->expression->sizeof_expr);
-		
+
 		if (left->id_info == nullptr)
 			return;
 
+		type = left->id_info->type_info->type_specifier.simple_type[0];
+		dtsize = data_type_size(type);
+		in = get_insn(MOV, 2);
+		in->operand_1->type = MEMORY;
+
 		if (get_function_local_member(&fmem, left->id_info->tok)) {
-			type = left->id_info->type_info->type_specifier.simple_type[0];
-			dtsize = data_type_size(type);
-			in = get_insn(MOV, 2);
-			in->operand_1->type = MEMORY;
 			in->operand_1->mem.mem_type = LOCAL;
 			in->operand_1->mem.fp_disp = fmem.fp_disp;
-            if(Compiler::global.x64)
-			    in->operand_1->mem.mem_size = 8;
-            else
-                in->operand_1->mem.mem_size = 4;
+			Compiler::global.x64 ? in->operand_1->mem.mem_size = 8 : in->operand_1->mem.mem_size = 4;
 			in->operand_2->type = REGISTER;
-
-			if(Compiler::global.x64)
-				in->operand_2->reg = RAX;
-			else
-				in->operand_2->reg = EAX;
-			
+			Compiler::global.x64 ? in->operand_2->reg = RAX : in->operand_2->reg = EAX;
 			in->comment = "    ; line: " + std::to_string(assgnexp->tok.loc.line);
 			instructions.push_back(in);
-		} 
-        else {
-			type = left->id_info->type_info->type_specifier.simple_type[0];
-			dtsize = data_type_size(type);
-			in = get_insn(MOV, 2);
-			in->operand_1->type = MEMORY;
+		}
+		else {
 			in->operand_1->mem.mem_type = GLOBAL;
 
-            if(Compiler::global.x64)
-			    in->operand_1->mem.mem_size = 8;
-            else
-                in->operand_1->mem.mem_size = 4;
-
+			Compiler::global.x64 ? in->operand_1->mem.mem_size = 8 : in->operand_1->mem.mem_size = 4;
 			in->operand_1->mem.name = left->id_info->symbol;
 			in->operand_2->type = REGISTER;
 
-			if(Compiler::global.x64)
-				in->operand_2->reg = RAX;
-			else
-				in->operand_2->reg = EAX;
-			
+			Compiler::global.x64 ? in->operand_2->reg = RAX : in->operand_2->reg = EAX;
+
 			if (left->is_subscript) {
 				Token sb = *(left->subscript.begin());
 				in->operand_1->mem.fp_disp = std::stoi(sb.string) * dtsize;
 			}
+
 			in->comment = "    ; line: " + std::to_string(assgnexp->tok.loc.line);
 			instructions.push_back(in);
 		}
 	}
-	
+
 	void CodeGen::gen_assgn_cast_expr(AssignmentExpression **asexpr) {
+
 		AssignmentExpression *assgnexp = *asexpr;
 		Instruction *in = nullptr;
 		int dtsize = 0;
 		IdentifierExpression *left = nullptr;
 		Token type;
 		FunctionMember fmem;
-		
+
 		if (assgnexp == nullptr)
 			return;
 		if (assgnexp->id_expr == nullptr)
 			return;
-		
+
 		auto resreg = [=](int sz) {
 			if (sz == 1)
 				return AL;
@@ -1775,13 +1760,13 @@ namespace xlang {
 			else
 				return RAX;
 		};
-		
+
 		left = assgnexp->id_expr;
 		if (left->unary != nullptr)
 			left = left->unary;
-		
+
 		gen_cast_expr(&assgnexp->expression->cast_expr);
-		
+
 		if (left->id_info == nullptr)
 			return;
 
@@ -1795,9 +1780,9 @@ namespace xlang {
 			in->operand_1->mem.mem_size = dtsize;
 			in->operand_2->type = REGISTER;
 			in->operand_2->reg = resreg(dtsize);
-			in->comment = "    ; line: " + std::to_string(assgnexp->tok.loc.line);
-			instructions.push_back(in);
-		} else {
+
+		}
+		else {
 			type = left->id_info->type_info->type_specifier.simple_type[0];
 			dtsize = data_type_size(type);
 			in = get_insn(MOV, 2);
@@ -1807,17 +1792,17 @@ namespace xlang {
 			in->operand_1->mem.name = left->id_info->symbol;
 			in->operand_2->type = REGISTER;
 			in->operand_2->reg = resreg(dtsize);
-			
+
 			if (left->is_subscript) {
 				Token sb = *(left->subscript.begin());
 				in->operand_1->mem.fp_disp = std::stoi(sb.string) * dtsize;
 			}
-
-			in->comment = "    ; line: " + std::to_string(assgnexp->tok.loc.line);
-			instructions.push_back(in);
 		}
+
+		in->comment = "    ; line: " + std::to_string(assgnexp->tok.loc.line);
+		instructions.push_back(in);
 	}
-	
+
 	void CodeGen::gen_id_expr(IdentifierExpression **idexpr) {
 
 		// generate id expresion
@@ -1831,19 +1816,19 @@ namespace xlang {
 		Token type;
 		TokenId op;
 		FunctionMember fmem;
-		
+
 		if (idexp == nullptr)
 			return;
-		
+
 		insert_comment("; line " + std::to_string(idexp->tok.loc.line));
-		
+
 		if (idexp->unary != nullptr) {
 			op = idexp->tok.number;
 			if (idexp->is_oprtr) {
 				in = get_insn(INSNONE, 2);
 				in->operand_1->type = REGISTER;
 
-				if(Compiler::global.x64)
+				if (Compiler::global.x64)
 					in->operand_1->reg = RAX;
 				else
 					in->operand_1->reg = EAX;
@@ -1857,24 +1842,26 @@ namespace xlang {
 
 				type = idexp->id_info->type_info->type_specifier.simple_type[0];
 				dtsize = data_type_size(type);
+				in->operand_2->type = MEMORY;
+
 				if (get_function_local_member(&fmem, idexp->id_info->tok)) {
-					in->operand_2->type = MEMORY;
 					in->operand_2->mem.mem_type = LOCAL;
-					in->operand_2->mem.mem_size = dtsize;
 					in->operand_2->mem.fp_disp = fmem.fp_disp;
-				} else {
-					in->operand_2->type = MEMORY;
+				}
+				else {
 					in->operand_2->mem.mem_type = GLOBAL;
-					in->operand_2->mem.mem_size = dtsize;
 					in->operand_2->mem.name = idexp->id_info->symbol;
 				}
+
+				in->operand_2->mem.mem_size = dtsize;
 			}
 			if (op == ADDROF_OP) {
 				in->insn_type = LEA;
 				in->operand_count = 2;
 				in->operand_2->mem.mem_size = 0;
 				in->comment = "    ; address of";
-			} else if (op == INCR_OP) {
+			}
+			else if (op == INCR_OP) {
 				in->insn_type = INC;
 				in->operand_count = 1;
 				insncls->delete_operand(&in->operand_1);
@@ -1883,7 +1870,8 @@ namespace xlang {
 				if (in->operand_1->mem.mem_size > 4)
 					in->operand_1->mem.mem_size = 4;
 				in->operand_2 = nullptr;
-			} else if (op == DECR_OP) {
+			}
+			else if (op == DECR_OP) {
 				in->insn_type = DEC;
 				in->operand_count = 1;
 				insncls->delete_operand(&in->operand_1);
@@ -1894,8 +1882,8 @@ namespace xlang {
 				in->operand_2 = nullptr;
 			}
 			instructions.push_back(in);
-
-		} else {
+		}
+		else {
 
 			if (idexp->id_info == nullptr)
 				return;
@@ -1906,21 +1894,23 @@ namespace xlang {
 					return AL;
 				else if (sz == 2)
 					return AX;
-				else if(sz == 4)
+				else if (sz == 4)
 					return EAX;
-				else 
+				else
 					return RAX;
 			};
-			
+
 			in = get_insn(MOV, 2);
 			in->operand_1->type = REGISTER;
 			in->operand_1->reg = resreg(dtsize);
+
 			if (get_function_local_member(&fmem, idexp->id_info->tok)) {
 				in->operand_2->type = MEMORY;
 				in->operand_2->mem.mem_type = LOCAL;
 				in->operand_2->mem.mem_size = dtsize;
 				in->operand_2->mem.fp_disp = fmem.fp_disp;
-			} else {
+			}
+			else {
 				in->operand_2->type = MEMORY;
 				in->operand_2->mem.mem_type = GLOBAL;
 				in->operand_2->mem.mem_size = dtsize;
@@ -1932,7 +1922,8 @@ namespace xlang {
 					if (is_literal(sb)) {
 						in->operand_2->mem.fp_disp = Convert::tok_to_decimal(sb) * dtsize;
 						in->operand_2->reg = RNONE;
-					} else {
+					}
+					else {
 						FunctionMember fmem2;
 						Instruction *in2 = nullptr;
 						auto indexreg = [=](int sz) {
@@ -1942,65 +1933,49 @@ namespace xlang {
 								return CX;
 							else if (sz == 4)
 								return ECX;
-							else 
+							else
 								return RAX;
 						};
 
 						in2 = get_insn(XOR, 2);
 						in2->operand_1->type = REGISTER;
-						if(Compiler::global.x64)
+						if (Compiler::global.x64)
 							in2->operand_1->reg = RCX;
 						else
 							in2->operand_1->reg = ECX;
 
 						in2->operand_2->type = REGISTER;
-						if(Compiler::global.x64)
+						if (Compiler::global.x64)
 							in2->operand_2->reg = RCX;
 						else
 							in2->operand_2->reg = ECX;
-						
+
 						instructions.push_back(in2);
 						in2 = nullptr;
+						in2 = get_insn(MOV, 2);
+						in2->operand_1->type = REGISTER;
+						in2->operand_1->reg = indexreg(dtsize);
+						in2->operand_2->type = MEMORY;
 
 						if (get_function_local_member(&fmem2, sb)) {
-							in2 = get_insn(MOV, 2);
-							in2->operand_1->type = REGISTER;
-							in2->operand_1->reg = indexreg(dtsize);
-							in2->operand_2->type = MEMORY;
 							in2->operand_2->mem.mem_type = LOCAL;
-							in2->operand_2->mem.mem_size = dtsize;
 							in2->operand_2->mem.fp_disp = fmem2.fp_disp;
-							instructions.push_back(in2);
-
-							if(Compiler::global.x64)
-								in->operand_2->reg = RCX;
-							else
-								in->operand_2->reg = ECX;
-
-							in->operand_2->arr_disp = dtsize;
-						} else {
-							in2 = get_insn(MOV, 2);
-							in2->operand_1->type = REGISTER;
-							in2->operand_1->reg = indexreg(dtsize);
-							in2->operand_2->type = MEMORY;
-							in2->operand_2->mem.mem_type = GLOBAL;
-							in2->operand_2->mem.mem_size = dtsize;
-							in2->operand_2->mem.name = sb.string;
-							instructions.push_back(in2);
-
-							if(Compiler::global.x64)
-								in->operand_2->reg = RCX;
-							else
-								in->operand_2->reg = ECX;
-							
-							in->operand_2->arr_disp = dtsize;
 						}
+						else {
+							in2->operand_2->mem.mem_type = GLOBAL;
+							in2->operand_2->mem.name = sb.string;
+						}
+
+						in2->operand_2->mem.mem_size = dtsize;
+						instructions.push_back(in2);
+						Compiler::global.x64 ? in->operand_2->reg = RCX : in->operand_2->reg = ECX;
+						in->operand_2->arr_disp = dtsize;
 					}
 				}
 			}
 
 			instructions.push_back(in);
-			
+
 			//check for pointer operator count
 			if (idexp->ptr_oprtr_count > 1) {
 				for (int i = 1; i < idexp->ptr_oprtr_count; i++) {
@@ -2008,54 +1983,54 @@ namespace xlang {
 					//insert instruction by dereferencing pointer
 					//for dereferencing, we need size, so storing it as memory type
 					//with register name eax as global variable name
-					
+
 					in = get_insn(MOV, 2);
 					in->operand_1->type = REGISTER;
-					
-					if(Compiler::global.x64)
+
+					if (Compiler::global.x64)
 						in->operand_1->reg = RAX;
 					else
 						in->operand_1->reg = EAX;
-							
+
 					in->operand_2->type = MEMORY;
 					in->operand_2->mem.mem_type = GLOBAL;
-					
-					if(Compiler::global.x64){
+
+					if (Compiler::global.x64) {
 						in->operand_2->mem.mem_size = 8;
 						in->operand_2->mem.name = "rax";
 					}
-					else{
-						in->operand_2->mem.mem_size = 4;			
+					else {
+						in->operand_2->mem.mem_size = 4;
 						in->operand_2->mem.name = "eax";
 					}
-					
+
 					instructions.push_back(in);
 				}
 			}
 		}
 	}
-	
+
 	void CodeGen::gen_assgn_id_expr(AssignmentExpression **asexpr) {
-		
+
 		AssignmentExpression *assgnexp = *asexpr;
 		Instruction *in = nullptr;
 		int dtsize = 0;
 		IdentifierExpression *left = nullptr;
 		Token type;
 		FunctionMember fmem;
-		
+
 		if (assgnexp == nullptr)
 			return;
-		
+
 		if (assgnexp->id_expr == nullptr)
 			return;
-		
+
 		left = assgnexp->id_expr;
 		if (left->unary != nullptr)
 			left = left->unary;
-		
+
 		gen_id_expr(&assgnexp->expression->id_expr);
-		
+
 		auto resultreg = [=](int sz) {
 			if (sz == 1)
 				return AL;
@@ -2063,65 +2038,60 @@ namespace xlang {
 				return AX;
 			else if (sz == 4)
 				return EAX;
-			else 
+			else
 				return RAX;
 		};
-		
+
 		if (left->id_info == nullptr)
 			return;
 
 		type = left->id_info->type_info->type_specifier.simple_type[0];
 		dtsize = data_type_size(type);
-		
+
+		in = get_insn(MOV, 2);
+		in->operand_1->type = MEMORY;
+
 		if (get_function_local_member(&fmem, left->id_info->tok)) {
-			in = get_insn(MOV, 2);
-			in->operand_1->type = MEMORY;
 			in->operand_1->mem.mem_type = LOCAL;
 			in->operand_1->mem.fp_disp = fmem.fp_disp;
-			in->operand_1->mem.mem_size = dtsize;
-			in->operand_2->type = REGISTER;
-			in->operand_2->reg = resultreg(dtsize);
-			in->comment = "    ; line: " + std::to_string(assgnexp->tok.loc.line);
-			instructions.push_back(in);
-		} else {
-			in = get_insn(MOV, 2);
-			in->operand_1->type = MEMORY;
+		}
+		else {
 			in->operand_1->mem.mem_type = GLOBAL;
-			in->operand_1->mem.mem_size = dtsize;
 			in->operand_1->mem.name = left->id_info->symbol;
-			in->operand_2->type = REGISTER;
-			in->operand_2->reg = resultreg(dtsize);
 
 			if (left->is_subscript) {
 				Token sb = *(left->subscript.begin());
 				in->operand_1->mem.fp_disp = std::stoi(sb.string) * dtsize;
 			}
-
-			in->comment = "    ; line: " + std::to_string(assgnexp->tok.loc.line);
-			instructions.push_back(in);
 		}
+
+		in->operand_2->type = REGISTER;
+		in->operand_2->reg = resultreg(dtsize);
+		in->operand_1->mem.mem_size = dtsize;
+		in->comment = "    ; line: " + std::to_string(assgnexp->tok.loc.line);
+		instructions.push_back(in);
 	}
-	
+
 	void CodeGen::gen_assgn_funccall_expr(AssignmentExpression **asexpr) {
-		
+
 		AssignmentExpression *assgnexp = *asexpr;
 		Instruction *in = nullptr;
 		int dtsize = 0;
 		IdentifierExpression *left = nullptr;
 		Token type;
 		FunctionMember fmem;
-		
+
 		if (assgnexp == nullptr)
 			return;
 		if (assgnexp->id_expr == nullptr)
 			return;
-		
+
 		left = assgnexp->id_expr;
 		if (left->unary != nullptr)
 			left = left->unary;
-		
+
 		gen_funccall_expr(&assgnexp->expression->call_expr);
-		
+
 		if (left->id_info == nullptr)
 			return;
 
@@ -2135,33 +2105,26 @@ namespace xlang {
 			in->operand_1->mem.mem_size = 4;
 			in->operand_2->type = REGISTER;
 
-			if(Compiler::global.x64)
+			if (Compiler::global.x64)
 				in->operand_2->reg = RAX;
 			else
 				in->operand_2->reg = EAX;
 
 			in->comment = "    ; line: " + std::to_string(assgnexp->tok.loc.line) + ", assign";
 			instructions.push_back(in);
-		} else {
+		}
+		else {
 			type = left->id_info->type_info->type_specifier.simple_type[0];
 			dtsize = data_type_size(type);
 			in = get_insn(MOV, 2);
 			in->operand_1->type = MEMORY;
 			in->operand_1->mem.mem_type = GLOBAL;
 
-			if(Compiler::global.x64)
-				in->operand_1->mem.mem_size = 8;
-			else
-				in->operand_1->mem.mem_size = 4;
-			
+			Compiler::global.x64 ? in->operand_1->mem.mem_size = 8 : in->operand_1->mem.mem_size = 4;
 			in->operand_1->mem.name = left->id_info->symbol;
 			in->operand_2->type = REGISTER;
 
-			if(Compiler::global.x64)
-				in->operand_2->reg = RAX;
-			else
-				in->operand_2->reg = EAX;
-
+			Compiler::global.x64 ? in->operand_2->reg = RAX : in->operand_2->reg = EAX;
 			if (left->is_subscript) {
 				Token sb = *(left->subscript.begin());
 				in->operand_1->mem.fp_disp = std::stoi(sb.string) * dtsize;
@@ -2171,15 +2134,15 @@ namespace xlang {
 			instructions.push_back(in);
 		}
 	}
-	
+
 	void CodeGen::gen_assignment_expr(AssignmentExpression **asexpr) {
 		AssignmentExpression *assgnexp = *asexpr;
-		
+
 		if (assgnexp == nullptr)
 			return;
 		if (assgnexp->id_expr == nullptr)
 			return;
-		
+
 		switch (assgnexp->expression->expr_kind) {
 			case ExpressionType::PRIMARY_EXPR :
 				gen_assgn_primary_expr(&assgnexp);
@@ -2201,29 +2164,29 @@ namespace xlang {
 				break;
 		}
 	}
-	
+
 	void CodeGen::gen_funccall_expr(CallExpression **fccallex) {
- 
+
 		// generate x86 function call
 		// each passed parameter is 4 byte
 		// even float, double is not yet considered yet to pass
 		// globals can be used anywhere
 		// function call parameters are pushed on stack in reverse order
- 
+
 		Instruction *in = nullptr;
 		int pushed_count = 0;
 		int param_count = 0;
 		CallExpression *fcexpr = *fccallex;
 		std::list<Expression *>::reverse_iterator it;
 		std::pair<int, int> pr;
-		
+
 		if (fcexpr == nullptr)
 			return;
 		if (fcexpr->function == nullptr)
 			return;
-		
+
 		insert_comment("; line: " + std::to_string(fcexpr->function->tok.loc.line) + ", func_call: " + fcexpr->function->tok.string);
-		
+
 		it = fcexpr->expression_list.rbegin();
 		param_count = fcexpr->expression_list.size();
 		while (it != fcexpr->expression_list.rend()) {
@@ -2236,11 +2199,11 @@ namespace xlang {
 						in = get_insn(FSTP, 1);
 						in->operand_1->type = MEMORY;
 
-						if(Compiler::global.x64){
+						if (Compiler::global.x64) {
 							in->operand_1->reg = RAX;
 							in->operand_1->mem.mem_size = 8;
 						}
-						else{
+						else {
 							in->operand_1->reg = EAX;
 							in->operand_1->mem.mem_size = 4;
 						}
@@ -2254,97 +2217,91 @@ namespace xlang {
 						in = get_insn(PUSH, 1);
 						in->operand_1->type = REGISTER;
 
-						if(Compiler::global.x64)
+						if (Compiler::global.x64)
 							in->operand_1->reg = RAX;
 						else
 							in->operand_1->reg = EAX;
-						
+
 						insncls->delete_operand(&(in->operand_2));
 						in->comment = "    ; param " + std::to_string(param_count);
 						instructions.push_back(in);
-					} else {
+					}
+					else {
 						in = get_insn(PUSH, 1);
 						in->operand_1->type = REGISTER;
 
-						if(Compiler::global.x64)
+						if (Compiler::global.x64)
 							in->operand_1->reg = RAX;
 						else
 							in->operand_1->reg = EAX;
-						
+
 						insncls->delete_operand(&(in->operand_2));
 						in->comment = "    ; param " + std::to_string(param_count);
 						instructions.push_back(in);
 						in = nullptr;
 					}
 					break;
+
 				case ExpressionType::SIZEOF_EXPR :
 					gen_sizeof_expr(&((*it)->sizeof_expr));
 					in = get_insn(PUSH, 1);
 					in->operand_1->type = REGISTER;
-				
-					if(Compiler::global.x64)
-						in->operand_1->reg = RAX;
-					else
-						in->operand_1->reg = EAX;
-
+					Compiler::global.x64 ? in->operand_1->reg = RAX : in->operand_1->reg = EAX;
 					in->comment = "    ; param " + std::to_string(param_count);
 					insncls->delete_operand(&(in->operand_2));
 					instructions.push_back(in);
 					in = nullptr;
 					break;
-				case ExpressionType::ID_EXPR :
+
+				case ExpressionType::ID_EXPR:
 					gen_id_expr(&((*it)->id_expr));
 					in = get_insn(PUSH, 1);
 					in->operand_1->type = REGISTER;
-					if(Compiler::global.x64)
-						in->operand_1->reg = RAX;
-					else
-						in->operand_1->reg = EAX;
+					Compiler::global.x64 ? in->operand_1->reg = RAX : in->operand_1->reg = EAX;
 					in->comment = "    ; param " + std::to_string(param_count);
 					insncls->delete_operand(&(in->operand_2));
 					instructions.push_back(in);
 					in = nullptr;
 					break;
+
 				default :
 					break;
 			}
+
 			pushed_count += 4;
 			param_count--;
 			it++;
 		}
-		
+
 		in = get_insn(CALL, 1);
 		in->operand_1->type = LITERAL;
-		if (fcexpr->function->left == nullptr && fcexpr->function->right == nullptr) {
+
+		if (fcexpr->function->left == nullptr && fcexpr->function->right == nullptr)
 			in->operand_1->literal = fcexpr->function->tok.string;
-		}
 
 		insncls->delete_operand(&(in->operand_2));
 		instructions.push_back(in);
-		
+
 		if (fcexpr->expression_list.size() > 0) {
 			in = get_insn(ADD, 2);
 			in->operand_1->type = REGISTER;
-			if(Compiler::global.x64)
-				in->operand_1->reg = RAX;
-			else
-				in->operand_1->reg = EAX;
+			Compiler::global.x64 ? in->operand_1->reg = RAX : in->operand_1->reg = EAX;
 			in->operand_2->type = LITERAL;
 			in->operand_2->literal = std::to_string(pushed_count);
 			in->comment = "    ; restore func-call params stack frame";
 			instructions.push_back(in);
 		}
 	}
-	
+
 	void CodeGen::gen_cast_expr(CastExpression **cexpr) {
 		CastExpression *cstexpr = *cexpr;
 		Instruction *in = nullptr;
 		int dtsize = -1;
 		FunctionMember fmem;
-		
+
 		if (cstexpr == nullptr)
 			return;
-		
+
 		auto resreg = [=](int sz) {
 			if (sz == 1)
 				return AL;
@@ -2352,46 +2309,57 @@ namespace xlang {
 				return AX;
 			else if (sz == 4)
 				return EAX;
-			else 
+			else if (sz == 8)
 				return RAX;
+			else
+				return RNONE;
 		};
-		
-		if (cstexpr->is_simple_type) {
-			if (cstexpr->target == nullptr)
-				return;
-			if (cstexpr->target->tok.number != IDENTIFIER)
-				return;
-			if (cstexpr->target->id_info == nullptr)
-				return;
-			insert_comment("; cast expression, line " + std::to_string(cstexpr->simple_type[0].loc.line));
-			dtsize = data_type_size(cstexpr->simple_type[0]);
-			get_function_local_member(&fmem, cstexpr->target->id_info->tok);
-			in = get_insn(MOV, 2);
-			in->operand_1->type = REGISTER;
-			in->operand_1->reg = resreg(dtsize);
-			if (fmem.insize != -1) {
-				in->operand_2->type = MEMORY;
-				in->operand_2->mem.mem_type = LOCAL;
-				in->operand_2->mem.mem_size = dtsize;
-				in->operand_2->mem.fp_disp = fmem.fp_disp;
-			} else {
-				in->operand_2->type = MEMORY;
-				in->operand_2->mem.name = cstexpr->target->id_info->symbol;
-				in->operand_2->mem.mem_type = GLOBAL;
-				in->operand_2->mem.mem_size = dtsize;
-			}
-			instructions.push_back(in);
+
+		if (!cstexpr->is_simple_type) {
+			return;
 		}
+
+		if (cstexpr->target == nullptr)
+			return;
+
+		if (cstexpr->target->tok.number != IDENTIFIER)
+			return;
+
+		if (cstexpr->target->id_info == nullptr)
+			return;
+
+		insert_comment("; cast expression, line " + std::to_string(cstexpr->simple_type[0].loc.line));
+		dtsize = data_type_size(cstexpr->simple_type[0]);
+		get_function_local_member(&fmem, cstexpr->target->id_info->tok);
+
+		in = get_insn(MOV, 2);
+		in->operand_1->type = REGISTER;
+		in->operand_1->reg = resreg(dtsize);
+
+		if (fmem.insize != -1) {
+			in->operand_2->type = MEMORY;
+			in->operand_2->mem.mem_type = LOCAL;
+			in->operand_2->mem.mem_size = dtsize;
+			in->operand_2->mem.fp_disp = fmem.fp_disp;
+		}
+		else {
+			in->operand_2->type = MEMORY;
+			in->operand_2->mem.name = cstexpr->target->id_info->symbol;
+			in->operand_2->mem.mem_type = GLOBAL;
+			in->operand_2->mem.mem_size = dtsize;
+		}
+
+		instructions.push_back(in);
 	}
-	
+
 	void CodeGen::gen_expr(Expression **__expr) {
 		Expression *_expr = *__expr;
 		if (_expr == nullptr)
 			return;
-		
+
 		reg->free_all_registers();
 		reg->free_all_float_registers();
-		
+
 		switch (_expr->expr_kind) {
 			case ExpressionType::PRIMARY_EXPR :
 				gen_primary_expr(&(_expr->primary_expr));
@@ -2413,11 +2381,11 @@ namespace xlang {
 				break;
 		}
 	}
-	
+
 	void CodeGen::gen_label_statement(LabelStatement **labstmt) {
 		if (*labstmt == nullptr)
 			return;
-		
+
 		insert_comment("; line " + std::to_string((*labstmt)->label.loc.line));
 		Instruction *in = get_insn(INSLABEL, 0);
 		in->label = "." + (*labstmt)->label.string;
@@ -2425,13 +2393,13 @@ namespace xlang {
 		insncls->delete_operand(&(in->operand_2));
 		instructions.push_back(in);
 	}
-	
+
 	void CodeGen::gen_jump_statement(JumpStatement **jstmt) {
 		JumpStatement *jmpstmt = *jstmt;
 		Instruction *in = nullptr;
 		if (jmpstmt == nullptr)
 			return;
-		
+
 		switch (jmpstmt->type) {
 			case JumpType::BREAK:
 				in = get_insn(JMP, 1);
@@ -2463,7 +2431,7 @@ namespace xlang {
 				insncls->delete_operand(&(in->operand_2));
 				instructions.push_back(in);
 				break;
-			
+
 			case JumpType::CONTINUE:
 				in = get_insn(JMP, 1);
 				in->operand_1->type = LITERAL;
@@ -2485,7 +2453,7 @@ namespace xlang {
 				}
 				instructions.push_back(in);
 				break;
-			
+
 			case JumpType::RETURN:
 				if (jmpstmt->expression != nullptr) {
 					gen_expr(&(jmpstmt->expression));
@@ -2497,7 +2465,7 @@ namespace xlang {
 				insncls->delete_operand(&(in->operand_2));
 				instructions.push_back(in);
 				break;
-			
+
 			case JumpType::GOTO:
 				in = get_insn(JMP, 1);
 				in->operand_1->type = LITERAL;
@@ -2508,11 +2476,10 @@ namespace xlang {
 				break;
 		}
 	}
-	
+
 	RegisterType CodeGen::get_reg_type_by_char(char ch) {
 
-		if(Compiler::global.x64) {
-
+		if (Compiler::global.x64) {
 			switch (ch) {
 				case 'a':
 					return RAX;
@@ -2530,7 +2497,7 @@ namespace xlang {
 					return RNONE;
 			}
 		}
-		else{
+		else {
 
 			switch (ch) {
 				case 'a':
@@ -2550,49 +2517,53 @@ namespace xlang {
 			}
 		}
 	}
-	
+
 	std::string CodeGen::get_asm_output_operand(AsmOperand **asmoprnd) {
 		AsmOperand *asmoperand = *asmoprnd;
 		std::string constraint = "";
 		FunctionMember fmem;
 		PrimaryExpression *pexp;
-		
+
 		if (asmoperand == nullptr)
 			return constraint;
-		
+
 		constraint = asmoperand->constraint.string;
-		
-		if(Compiler::global.x64){
-			if (constraint == "=a") 
+
+		if (Compiler::global.x64) {
+			if (constraint == "=a")
 				return "rax";
-			else if (constraint == "=b") 
+			else if (constraint == "=b")
 				return "rbx";
-			else if (constraint == "=c") 
+			else if (constraint == "=c")
 				return "rcx";
-			else if (constraint == "=d") 
+			else if (constraint == "=d")
 				return "rdx";
-			else if (constraint == "=S") 
+			else if (constraint == "=S")
 				return "rsi";
-			else if (constraint == "=D") 
+			else if (constraint == "=D")
 				return "rdi";
 		}
-		else{
+		else {
 
 			if (constraint == "=a") {
 				return "eax";
-			} else if (constraint == "=b") {
+			}
+			else if (constraint == "=b") {
 				return "ebx";
-			} else if (constraint == "=c") {
+			}
+			else if (constraint == "=c") {
 				return "ecx";
-			} else if (constraint == "=d") {
+			}
+			else if (constraint == "=d") {
 				return "edx";
-			} else if (constraint == "=S") {
+			}
+			else if (constraint == "=S") {
 				return "esi";
-			} else if (constraint == "=D") {
+			}
+			else if (constraint == "=D") {
 				return "edi";
 			}
-		
-		} 
+		}
 
 		if (constraint == "=m") {
 
@@ -2602,21 +2573,23 @@ namespace xlang {
 			if (fmem.insize != -1) {
 				std::string cast = insncls->insnsize_name(get_insn_size_type(fmem.insize));
 				if (fmem.fp_disp < 0) {
-					if(Compiler::global.x64){
+					if (Compiler::global.x64) {
 						return cast + "[rbp - " + std::to_string(fmem.fp_disp * (-1)) + "]";
 					}
-					else{
+					else {
 						return cast + "[ebp - " + std::to_string(fmem.fp_disp * (-1)) + "]";
 					}
-				} else {
-					if(Compiler::global.x64){
+				}
+				else {
+					if (Compiler::global.x64) {
 						return cast + "[rbp + " + std::to_string(fmem.fp_disp) + "]";
 					}
-					else{
+					else {
 						return cast + "[ebp + " + std::to_string(fmem.fp_disp) + "]";
 					}
 				}
-			} else {
+			}
+			else {
 				if (pexp->id_info == nullptr) {
 					pexp->id_info = search_id(pexp->tok.string);
 				}
@@ -2629,22 +2602,23 @@ namespace xlang {
 		}
 		return "";
 	}
-	
+
 	std::string CodeGen::get_asm_input_operand(AsmOperand **asmoprnd) {
 		AsmOperand *asmoperand = *asmoprnd;
-		std::string constraint = "", mem = "";
+		std::string constraint;
+		std::string mem = "";
 		FunctionMember fmem;
 		TokenId t;
 		Token tok;
 		PrimaryExpression *pexp;
 		std::string literal;
 		int decm;
-		
+
 		if (asmoperand == nullptr)
 			return constraint;
-		
+
 		constraint = asmoperand->constraint.string;
-		
+
 		if (asmoperand->expression != nullptr) {
 			pexp = asmoperand->expression->primary_expr;
 			tok = pexp->tok;
@@ -2655,16 +2629,17 @@ namespace xlang {
 				case LIT_DECIMAL:
 				case LIT_HEX:
 				case LIT_OCTAL:
-					constraint = "i";
+					constraint = 'i';
 					decm = Convert::tok_to_decimal(tok);
 					if (decm < 0) {
 						literal = "0x" + Convert::dec_to_hex(decm);
-					} else {
+					}
+					else {
 						literal = std::to_string(decm);
 					}
 					break;
 				case IDENTIFIER:
-					constraint = "m";
+					constraint = 'm';
 					if (pexp->id_info == nullptr)
 						pexp->id_info = search_id(tok.string);
 					break;
@@ -2672,74 +2647,58 @@ namespace xlang {
 					break;
 			}
 		}
-		
 
-		if(Compiler::global.x64){
-			if (constraint == "a") 
-				return "rax";
-			else if (constraint == "b") 
-				return "rbx";
-			else if (constraint == "c") 
-				return "rcx";
-			else if (constraint == "d") 
-				return "rdx";
-			else if (constraint == "S") 
-				return "rsi";
-			else if (constraint == "D") 
-				return "rdi";
-			else if (constraint == "i") 
+		switch (constraint[0]) {
+			case 'a':
+				return Compiler::global.x64 ? "rax" : "eax";
+			case 'b':
+				return Compiler::global.x64 ? "rbx" : "ebx";
+			case 'c':
+				return Compiler::global.x64 ? "rcx" : "ecx";
+			case 'd':
+				return Compiler::global.x64 ? "rdx" : "edx";
+			case 'S':
+				return Compiler::global.x64 ? "rsi" : "esi";
+			case 'D':
+				return Compiler::global.x64 ? "rdi" : "edi";
+			case 'm':
+				get_function_local_member(&fmem, pexp->tok);
+				if (fmem.insize != -1) {
+					std::string cast = insncls->insnsize_name(get_insn_size_type(fmem.insize));
+					if (fmem.fp_disp < 0) {
+						if (Compiler::global.x64) {
+							return cast + "[rbp - " + std::to_string(fmem.fp_disp * (-1)) + "]";
+						}
+						else {
+							return cast + "[ebp - " + std::to_string(fmem.fp_disp * (-1)) + "]";
+						}
+					}
+					else {
+						if (Compiler::global.x64) {
+							return cast + "[rbp + " + std::to_string(fmem.fp_disp) + "]";
+						}
+						else {
+							return cast + "[ebp + " + std::to_string(fmem.fp_disp) + "]";
+						}
+					}
+				}
+				else {
+					if (pexp->id_info == nullptr) {
+						pexp->id_info = search_id(pexp->tok.string);
+					}
+					if (pexp->id_info != nullptr) {
+						Token type = pexp->id_info->type_info->type_specifier.simple_type[0];
+						std::string cast = insncls->insnsize_name(get_insn_size_type(data_type_size(type)));
+						return cast + "[" + pexp->tok.string + "]";
+					}
+				}
+			case 'i':
 				return literal;
 		}
-		else{
-			if (constraint == "a") 
-				return "eax";
-			else if (constraint == "b") 
-				return "ebx";
-			else if (constraint == "c") 
-				return "ecx";
-			else if (constraint == "d") 
-				return "edx";
-			else if (constraint == "S") 
-				return "esi";
-			else if (constraint == "D") 
-				return "edi";
-			else if (constraint == "i") 
-				return literal;
-		}
 
-		if (constraint == "m") {
-			get_function_local_member(&fmem, pexp->tok);
-			if (fmem.insize != -1) {
-				std::string cast = insncls->insnsize_name(get_insn_size_type(fmem.insize));
-				if (fmem.fp_disp < 0) {
-					if(Compiler::global.x64){
-						return cast + "[rbp - " + std::to_string(fmem.fp_disp * (-1)) + "]";
-					}
-					else{
-						return cast + "[ebp - " + std::to_string(fmem.fp_disp * (-1)) + "]";
-					}
-				} else {
-					if(Compiler::global.x64){
-						return cast + "[rbp + " + std::to_string(fmem.fp_disp) + "]";
-					}
-					else{
-						return cast + "[ebp + " + std::to_string(fmem.fp_disp) + "]";
-					}
-				}
-			} else {
-				if (pexp->id_info == nullptr) {
-					pexp->id_info = search_id(pexp->tok.string);
-				}
-				if (pexp->id_info != nullptr) {
-					Token type = pexp->id_info->type_info->type_specifier.simple_type[0];
-					std::string cast = insncls->insnsize_name(get_insn_size_type(data_type_size(type)));
-					return cast + "[" + pexp->tok.string + "]";
-				}
-			}
-		}
 		return "";
 	}
-	
+
 	void CodeGen::get_nonescaped_string(std::string &str) {
 		size_t fnd;
 		fnd = str.find("\\t");
@@ -2748,22 +2707,22 @@ namespace xlang {
 			fnd = str.find("\\t", fnd + 2);
 		}
 	}
-	
+
 	void CodeGen::gen_asm_statement(AsmStatement **_asmstm) {
 		AsmStatement *asmstmt = *_asmstm;
 		Instruction *in = nullptr;
 		size_t fnd;
 		std::string asmtemplate, asmoperand;
-		
+
 		if (asmstmt == nullptr)
 			return;
-		
+
 		if (asmstmt != nullptr) {
 			if (!asmstmt->asm_template.string.empty()) {
 				insert_comment("; inline assembly, line " + std::to_string(asmstmt->asm_template.loc.line));
 			}
 		}
-		
+
 		while (asmstmt != nullptr) {
 			asmtemplate = asmstmt->asm_template.string;
 			get_nonescaped_string(asmtemplate);
@@ -2775,16 +2734,18 @@ namespace xlang {
 						if (fnd + 1 < asmtemplate.length()) {
 							if (asmtemplate.at(fnd + 1) == ',') {
 								asmtemplate.replace(fnd, 1, asmoperand);
-							} else {
+							}
+							else {
 								asmtemplate.replace(fnd, 2, asmoperand);
 							}
-						} else {
+						}
+						else {
 							asmtemplate.replace(fnd, 2, asmoperand);
 						}
 					}
 				}
 			}
-			
+
 			if (!asmstmt->input_operand.empty()) {
 				asmoperand = get_asm_input_operand(&asmstmt->input_operand[0]);
 				if (!asmoperand.empty()) {
@@ -2794,7 +2755,7 @@ namespace xlang {
 					}
 				}
 			}
-			
+
 			in = get_insn(INSASM, 0);
 			insncls->delete_operand(&in->operand_1);
 			insncls->delete_operand(&in->operand_2);
@@ -2804,7 +2765,7 @@ namespace xlang {
 			asmstmt = asmstmt->p_next;
 		}
 	}
-	
+
 	bool CodeGen::is_literal(Token tok) {
 		TokenId t = tok.number;
 		if (t == LIT_BIN || t == LIT_CHAR || t == LIT_DECIMAL || t == LIT_HEX || t == LIT_OCTAL) {
@@ -2812,7 +2773,7 @@ namespace xlang {
 		}
 		return false;
 	}
-	
+
 	bool CodeGen::gen_float_type_condition(PrimaryExpression **f1, PrimaryExpression **f2, PrimaryExpression **opr) {
 		PrimaryExpression *fexp1 = *f1;
 		PrimaryExpression *fexp2 = *f2;
@@ -2823,38 +2784,41 @@ namespace xlang {
 		FunctionMember fmem;
 		Instruction *in = nullptr;
 		int dtsize = 0;
-		
+
 		if (fexp1 == nullptr)
 			return false;
 		if (fexp2 == nullptr)
 			return false;
 		if (fexpopr == nullptr)
 			return false;
-		
+
 		if (fexp1->is_id) {
 			type = fexp1->id_info->type_info->type_specifier.simple_type[0];
 			if (type.number != KEY_FLOAT) {
 				if (type.number == KEY_DOUBLE);
 				else
 					return false;
-			} else if (type.number != KEY_DOUBLE) {
-				if (type.number == KEY_FLOAT);
-				else
-					return false;
 			}
-		} else if (fexp2->is_id) {
-			type = fexp2->id_info->type_info->type_specifier.simple_type[0];
-			if (type.number != KEY_FLOAT) {
-				if (type.number == KEY_DOUBLE);
-				else
-					return false;
-			} else if (type.number != KEY_DOUBLE) {
+			else if (type.number != KEY_DOUBLE) {
 				if (type.number == KEY_FLOAT);
 				else
 					return false;
 			}
 		}
-		
+		else if (fexp2->is_id) {
+			type = fexp2->id_info->type_info->type_specifier.simple_type[0];
+			if (type.number != KEY_FLOAT) {
+				if (type.number == KEY_DOUBLE);
+				else
+					return false;
+			}
+			else if (type.number != KEY_DOUBLE) {
+				if (type.number == KEY_FLOAT);
+				else
+					return false;
+			}
+		}
+
 		if (!fexp1->is_id) {
 			if (fexp1->tok.number != LIT_FLOAT) {
 				if (!fexp2->is_id) {
@@ -2863,7 +2827,7 @@ namespace xlang {
 				}
 			}
 		}
-		
+
 		if (!fexp1->is_id) {
 			dt = search_data(fexp1->tok.string);
 			if (dt == nullptr) {
@@ -2877,7 +2841,7 @@ namespace xlang {
 			in->comment = "  ; " + fexp1->tok.string;
 			insncls->delete_operand(&(in->operand_2));
 			instructions.push_back(in);
-			
+
 			if (!fexp2->is_id) {
 				dt = search_data(fexp2->tok.string);
 				if (dt == nullptr) {
@@ -2891,7 +2855,8 @@ namespace xlang {
 				in->comment = "  ; " + fexp2->tok.string;
 				insncls->delete_operand(&(in->operand_2));
 				instructions.push_back(in);
-			} else {
+			}
+			else {
 				type = fexp2->id_info->type_info->type_specifier.simple_type[0];
 				get_function_local_member(&fmem, fexp2->tok);
 				dtsize = data_type_size(type);
@@ -2904,7 +2869,8 @@ namespace xlang {
 					in->comment = "  ; " + fexp2->tok.string;
 					insncls->delete_operand(&(in->operand_2));
 					instructions.push_back(in);
-				} else {
+				}
+				else {
 					in = get_insn(FCOM, 1);
 					in->operand_1->type = MEMORY;
 					in->operand_1->mem.mem_type = GLOBAL;
@@ -2915,7 +2881,8 @@ namespace xlang {
 					instructions.push_back(in);
 				}
 			}
-		} else {
+		}
+		else {
 			get_function_local_member(&fmem, fexp1->tok);
 			type = fexp1->id_info->type_info->type_specifier.simple_type[0];
 			dtsize = data_type_size(type);
@@ -2928,7 +2895,8 @@ namespace xlang {
 				in->comment = "  ; " + fexp1->tok.string;
 				insncls->delete_operand(&(in->operand_2));
 				instructions.push_back(in);
-			} else {
+			}
+			else {
 				in = get_insn(FLD, 1);
 				in->operand_1->type = MEMORY;
 				in->operand_1->mem.mem_type = GLOBAL;
@@ -2938,7 +2906,7 @@ namespace xlang {
 				insncls->delete_operand(&(in->operand_2));
 				instructions.push_back(in);
 			}
-			
+
 			if (!fexp2->is_id) {
 				dt = search_data(fexp2->tok.string);
 				if (dt == nullptr) {
@@ -2952,7 +2920,8 @@ namespace xlang {
 				in->comment = "  ; " + fexp2->tok.string;
 				insncls->delete_operand(&(in->operand_2));
 				instructions.push_back(in);
-			} else {
+			}
+			else {
 				type = fexp2->id_info->type_info->type_specifier.simple_type[0];
 				get_function_local_member(&fmem, fexp2->tok);
 				dtsize = data_type_size(type);
@@ -2965,7 +2934,8 @@ namespace xlang {
 					in->comment = "  ; " + fexp2->tok.string;
 					insncls->delete_operand(&(in->operand_2));
 					instructions.push_back(in);
-				} else {
+				}
+				else {
 					in = get_insn(FCOM, 1);
 					in->operand_1->type = MEMORY;
 					in->operand_1->mem.mem_type = GLOBAL;
@@ -2977,21 +2947,21 @@ namespace xlang {
 				}
 			}
 		}
-		
+
 		in = get_insn(FSTSW, 1);
 		in->operand_1->type = REGISTER;
 		in->operand_1->reg = AX;
 		insncls->delete_operand(&(in->operand_2));
 		instructions.push_back(in);
-		
+
 		in = get_insn(SAHF, 0);
 		insncls->delete_operand(&(in->operand_1));
 		insncls->delete_operand(&(in->operand_2));
 		instructions.push_back(in);
-		
+
 		return true;
 	}
-	
+
 	TokenId CodeGen::gen_select_stmt_condition(Expression *_expr) {
 		PrimaryExpression *pexpr = nullptr;
 		Token tok;
@@ -3002,7 +2972,7 @@ namespace xlang {
 		int dtsize = 0;
 		if (_expr == nullptr)
 			return NONE;
-		
+
 		auto resreg = [=](int sz) {
 			if (sz == 1)
 				return AL;
@@ -3011,7 +2981,7 @@ namespace xlang {
 			else
 				return EAX;
 		};
-		
+
 		switch (_expr->expr_kind) {
 			case ExpressionType::PRIMARY_EXPR :
 				pexpr = _expr->primary_expr;
@@ -3027,7 +2997,7 @@ namespace xlang {
 						//if any one of them is float type
 						if (gen_float_type_condition(&pexpr->left, &pexpr->right, &pexpr))
 							return t;
-						
+
 						//if both are identifiers id op id
 						if (pexpr->left->tok.number == IDENTIFIER && pexpr->right->tok.number == IDENTIFIER) {
 							get_function_local_member(&fmem, pexpr->right->tok);
@@ -3041,7 +3011,8 @@ namespace xlang {
 								in->operand_2->mem.mem_type = LOCAL;
 								in->operand_2->mem.mem_size = fmem.insize;
 								in->operand_2->mem.fp_disp = fmem.fp_disp;
-							} else {
+							}
+							else {
 								in->operand_2->type = MEMORY;
 								in->operand_2->mem.name = pexpr->right->tok.string;
 								in->operand_2->mem.mem_type = GLOBAL;
@@ -3049,7 +3020,7 @@ namespace xlang {
 							}
 							instructions.push_back(in);
 							in = nullptr;
-							
+
 							type = pexpr->right->id_info->type_info->type_specifier.simple_type[0];
 							dtsize = data_type_size(type);
 							get_function_local_member(&fmem, pexpr->left->tok);
@@ -3061,7 +3032,8 @@ namespace xlang {
 								in->operand_1->mem.mem_type = LOCAL;
 								in->operand_1->mem.mem_size = fmem.insize;
 								in->operand_1->mem.fp_disp = fmem.fp_disp;
-							} else {
+							}
+							else {
 								in->operand_1->type = MEMORY;
 								in->operand_1->mem.name = pexpr->left->tok.string;
 								in->operand_1->mem.mem_type = GLOBAL;
@@ -3069,7 +3041,8 @@ namespace xlang {
 							}
 							instructions.push_back(in);
 							in = nullptr;
-						} else if (pexpr->left->tok.number == IDENTIFIER && is_literal(pexpr->right->tok)) {
+						}
+						else if (pexpr->left->tok.number == IDENTIFIER && is_literal(pexpr->right->tok)) {
 							get_function_local_member(&fmem, pexpr->left->tok);
 							in = get_insn(CMP, 2);
 							in->operand_2->type = LITERAL;
@@ -3079,14 +3052,16 @@ namespace xlang {
 								in->operand_1->mem.mem_type = LOCAL;
 								in->operand_1->mem.mem_size = fmem.insize;
 								in->operand_1->mem.fp_disp = fmem.fp_disp;
-							} else {
+							}
+							else {
 								in->operand_1->type = MEMORY;
 								in->operand_1->mem.name = pexpr->left->tok.string;
 								in->operand_1->mem.mem_type = GLOBAL;
 								in->operand_1->mem.mem_size = data_type_size(pexpr->left->id_info->type_info->type_specifier.simple_type[0]);
 							}
 							instructions.push_back(in);
-						} else if (is_literal(pexpr->left->tok) && pexpr->right->tok.number == IDENTIFIER) {
+						}
+						else if (is_literal(pexpr->left->tok) && pexpr->right->tok.number == IDENTIFIER) {
 							get_function_local_member(&fmem, pexpr->right->tok);
 							in = get_insn(CMP, 2);
 							in->operand_2->type = LITERAL;
@@ -3096,18 +3071,20 @@ namespace xlang {
 								in->operand_1->mem.mem_type = LOCAL;
 								in->operand_1->mem.mem_size = fmem.insize;
 								in->operand_1->mem.fp_disp = fmem.fp_disp;
-							} else {
+							}
+							else {
 								in->operand_1->type = MEMORY;
 								in->operand_1->mem.name = pexpr->right->tok.string;
 								in->operand_1->mem.mem_type = GLOBAL;
 								in->operand_1->mem.mem_size = data_type_size(pexpr->right->id_info->type_info->type_specifier.simple_type[0]);
 							}
 							instructions.push_back(in);
-						} else if (is_literal(pexpr->left->tok) && is_literal(pexpr->right->tok)) {
+						}
+						else if (is_literal(pexpr->left->tok) && is_literal(pexpr->right->tok)) {
 							in = get_insn(MOV, 2);
 							in->operand_1->type = REGISTER;
 
-							if(Compiler::global.x64)
+							if (Compiler::global.x64)
 								in->operand_1->reg = RAX;
 							else
 								in->operand_1->reg = EAX;
@@ -3116,15 +3093,15 @@ namespace xlang {
 							in->operand_2->literal = std::to_string(Convert::tok_to_decimal(pexpr->left->tok));
 							instructions.push_back(in);
 							in = nullptr;
-							
+
 							in = get_insn(CMP, 2);
 							in->operand_1->type = REGISTER;
 
-							if(Compiler::global.x64)
+							if (Compiler::global.x64)
 								in->operand_1->reg = RAX;
 							else
 								in->operand_1->reg = EAX;
-							
+
 							in->operand_2->type = LITERAL;
 							in->operand_2->literal = std::to_string(Convert::tok_to_decimal(pexpr->right->tok));
 							instructions.push_back(in);
@@ -3133,29 +3110,29 @@ namespace xlang {
 					}
 				}
 				break;
-			
+
 			default:
 				Log::error("only primary Expression supported in code generation");
 				break;
 		}
 		return NONE;
 	}
-	
+
 	void CodeGen::gen_selection_statement(SelectStatement **slstmt) {
 		SelectStatement *selstmt = *slstmt;
 		TokenId cond;
 		Instruction *in = nullptr;
-		
+
 		if (selstmt == nullptr)
 			return;
-		
+
 		cond = gen_select_stmt_condition(selstmt->condition);
-		
+
 		in = get_insn(JMP, 1);
 		in->operand_1->type = LITERAL;
 		in->operand_1->literal = ".if_label" + std::to_string(if_label_count);
 		insncls->delete_operand(&(in->operand_2));
-		
+
 		switch (cond) {
 			case COMP_EQ :
 				in->insn_type = JE;
@@ -3179,62 +3156,62 @@ namespace xlang {
 				break;
 		}
 		instructions.push_back(in);
-		
+
 		in = get_insn(JMP, 1);
 		in->operand_1->type = LITERAL;
 		in->operand_1->literal = ".else_label" + std::to_string(if_label_count);
 		insncls->delete_operand(&(in->operand_2));
 		instructions.push_back(in);
-		
+
 		in = get_insn(INSLABEL, 0);
 		in->label = ".if_label" + std::to_string(if_label_count);
 		insncls->delete_operand(&(in->operand_1));
 		insncls->delete_operand(&(in->operand_2));
 		instructions.push_back(in);
-		
+
 		if (selstmt->if_statement != nullptr) {
 			if_label_count++;
 			gen_statement(&(selstmt->if_statement));
-			
+
 			in = get_insn(JMP, 1);
 			in->operand_1->type = LITERAL;
 			in->operand_1->literal = ".exit_if" + std::to_string(exit_if_count);
 			insncls->delete_operand(&(in->operand_2));
 			instructions.push_back(in);
 		}
-		
+
 		in = get_insn(INSLABEL, 0);
 		in->label = ".else_label" + std::to_string(else_label_count);
 		insncls->delete_operand(&(in->operand_1));
 		insncls->delete_operand(&(in->operand_2));
 		instructions.push_back(in);
 		else_label_count++;
-		
-		if (selstmt->else_statement != nullptr) 
+
+		if (selstmt->else_statement != nullptr)
 			gen_statement(&(selstmt->else_statement));
-		
+
 		in = get_insn(INSLABEL, 0);
 		in->label = ".exit_if" + std::to_string(exit_if_count);
 		insncls->delete_operand(&(in->operand_1));
 		insncls->delete_operand(&(in->operand_2));
 		instructions.push_back(in);
-		
+
 		exit_if_count++;
 	}
-	
+
 	void CodeGen::gen_iteration_statement(IterationStatement **istmt) {
 		IterationStatement *itstmt = *istmt;
 		TokenId cond;
 		Instruction *in = nullptr;
 		int forcnt, whilecnt;
-		
+
 		if (itstmt == nullptr)
 			return;
-		
+
 		in = get_insn(INSLABEL, 0);
 		insncls->delete_operand(&(in->operand_1));
 		insncls->delete_operand(&(in->operand_2));
-		
+
 		//create loop label, while, dowhile, for
 		switch (itstmt->type) {
 			case IterationType::WHILE :
@@ -3263,7 +3240,7 @@ namespace xlang {
 				break;
 		}
 		instructions.push_back(in);
-		
+
 		switch (itstmt->type) {
 			case IterationType::WHILE :
 				//gen while loop condition
@@ -3271,9 +3248,9 @@ namespace xlang {
 				in = get_insn(JMP, 1);
 				in->operand_1->type = LITERAL;
 
-				if (!while_loop_stack.empty()) 
+				if (!while_loop_stack.empty())
 					in->operand_1->literal = ".exit_while_loop" + std::to_string(while_loop_stack.top());
-				else 
+				else
 					in->operand_1->literal = ".exit_while_loop" + std::to_string(exit_loop_label_count);
 
 				insncls->delete_operand(&(in->operand_2));
@@ -3303,9 +3280,9 @@ namespace xlang {
 						instructions.pop_back();
 						break;
 				}
-				
+
 				gen_statement(&(itstmt->_while.statement));
-				
+
 				in = get_insn(JMP, 1);
 				in->operand_1->type = LITERAL;
 
@@ -3313,7 +3290,8 @@ namespace xlang {
 					whilecnt = while_loop_stack.top();
 					in->operand_1->literal = ".while_loop" + std::to_string(whilecnt);
 					while_loop_stack.pop();
-				} else {
+				}
+				else {
 					in->operand_1->literal = ".while_loop" + std::to_string(while_loop_count);
 					whilecnt = while_loop_count;
 				}
@@ -3322,14 +3300,14 @@ namespace xlang {
 				insncls->delete_operand(&(in->operand_2));
 				instructions.push_back(in);
 				while_loop_count++;
-				
+
 				in = get_insn(INSLABEL, 0);
 				in->label = ".exit_while_loop" + std::to_string(whilecnt);
 				insncls->delete_operand(&(in->operand_1));
 				insncls->delete_operand(&(in->operand_2));
 				instructions.push_back(in);
 				break;
-			
+
 			case IterationType::DOWHILE :
 
 				gen_statement(&(itstmt->_dowhile.statement));
@@ -3340,7 +3318,8 @@ namespace xlang {
 				if (!dowhile_loop_stack.empty()) {
 					in->operand_1->literal = ".dowhile_loop" + std::to_string(dowhile_loop_stack.top());
 					dowhile_loop_stack.pop();
-				} else 
+				}
+				else
 					in->operand_1->literal = ".dowhile_loop" + std::to_string(exit_loop_label_count);
 
 				insncls->delete_operand(&(in->operand_2));
@@ -3371,21 +3350,21 @@ namespace xlang {
 				instructions.push_back(in);
 				dowhile_loop_count++;
 				break;
-			
+
 			case IterationType::FOR :
 
 				cond = gen_select_stmt_condition(itstmt->_for.condition);
 				in = get_insn(JMP, 1);
 				in->operand_1->type = LITERAL;
 
-				if (!for_loop_stack.empty()) 
+				if (!for_loop_stack.empty())
 					in->operand_1->literal = ".exit_for_loop" + std::to_string(for_loop_stack.top());
-				else 
+				else
 					in->operand_1->literal = ".exit_for_loop" + std::to_string(exit_loop_label_count);
-				
+
 				insncls->delete_operand(&(in->operand_2));
 				instructions.push_back(in);
-				
+
 				switch (cond) {
 					case COMP_EQ :
 						in->insn_type = JNE;
@@ -3410,7 +3389,7 @@ namespace xlang {
 						instructions.pop_back();
 						break;
 				}
-				
+
 				gen_statement(&(itstmt->_for.statement));
 				gen_expr(&(itstmt->_for.update_expr));
 				in = get_insn(JMP, 1);
@@ -3420,7 +3399,8 @@ namespace xlang {
 					forcnt = for_loop_stack.top();
 					in->operand_1->literal = ".for_loop" + std::to_string(forcnt);
 					for_loop_stack.pop();
-				} else {
+				}
+				else {
 					in->operand_1->literal = ".for_loop" + std::to_string(for_loop_count);
 					forcnt = for_loop_count;
 				}
@@ -3429,24 +3409,24 @@ namespace xlang {
 				insncls->delete_operand(&(in->operand_2));
 				instructions.push_back(in);
 				for_loop_count++;
-				
+
 				in = get_insn(INSLABEL, 0);
 				in->label = ".exit_for_loop" + std::to_string(forcnt);
 				insncls->delete_operand(&(in->operand_1));
 				insncls->delete_operand(&(in->operand_2));
 				instructions.push_back(in);
 				break;
-			
+
 			default:
 				break;
 		}
 	}
-	
+
 	void CodeGen::gen_statement(Statement **_stmt) {
 		Statement *_stmt2 = *_stmt;
 		if (_stmt2 == nullptr)
 			return;
-		
+
 		while (_stmt2 != nullptr) {
 			switch (_stmt2->type) {
 				case StatementType::LABEL :
@@ -3473,18 +3453,18 @@ namespace xlang {
 			_stmt2 = _stmt2->p_next;
 		}
 	}
-	
+
 	void CodeGen::save_frame_pointer() {
-		
+
 		// save frame pointer and create new stack for new function
 		// push ebp|rbp
 		// mov ebp|rpb, esp|rsp
-		
+
 		if (!Compiler::global.omit_frame_pointer) {
 			Instruction *in = get_insn(PUSH, 1);
 			in->operand_1->type = REGISTER;
 
-			if(Compiler::global.x64)
+			if (Compiler::global.x64)
 				in->operand_1->reg = RBP;
 			else
 				in->operand_1->reg = EBP;
@@ -3492,27 +3472,27 @@ namespace xlang {
 			insncls->delete_operand(&(in->operand_2));
 			instructions.push_back(in);
 			in = nullptr;
-			
+
 			in = get_insn(MOV, 2);
 			in->insn_type = MOV;
 			in->operand_count = 2;
 			in->operand_1->type = REGISTER;
 
-			if(Compiler::global.x64)
+			if (Compiler::global.x64)
 				in->operand_1->reg = RBP;
 			else
 				in->operand_1->reg = EBP;
-			
+
 			in->operand_2->type = REGISTER;
-			if(Compiler::global.x64)
+			if (Compiler::global.x64)
 				in->operand_2->reg = RSP;
 			else
 				in->operand_2->reg = ESP;
-			
+
 			instructions.push_back(in);
 		}
 	}
-	
+
 	void CodeGen::restore_frame_pointer() {
 
 		// local label for exiting function,for return
@@ -3523,40 +3503,40 @@ namespace xlang {
 		// pop ebp|rbp
 		//
 		// here leave instruction can also be used
-		
+
 		Instruction *in = get_insn(INSLABEL, 0);
 		in->label = "._exit_" + func_symtab->func_info->func_name;
 		insncls->delete_operand(&(in->operand_1));
 		insncls->delete_operand(&(in->operand_2));
 		instructions.push_back(in);
 		in = nullptr;
-		
+
 		if (!Compiler::global.omit_frame_pointer) {
 			in = get_insn(MOV, 2);
 			in->insn_type = MOV;
 			in->operand_count = 2;
 
 			in->operand_1->type = REGISTER;
-			if(Compiler::global.x64)
+			if (Compiler::global.x64)
 				in->operand_1->reg = RSP;
 			else
 				in->operand_1->reg = ESP;
 
 			in->operand_2->type = REGISTER;
-			if(Compiler::global.x64)
+			if (Compiler::global.x64)
 				in->operand_2->reg = RBP;
 			else
 				in->operand_2->reg = EBP;
 
 			instructions.push_back(in);
 			in = nullptr;
-			
+
 			in = get_insn(POP, 1);
 			in->insn_type = POP;
 			in->operand_count = 1;
 			in->operand_1->type = REGISTER;
 
-			if(Compiler::global.x64)
+			if (Compiler::global.x64)
 				in->operand_1->reg = RBP;
 			else
 				in->operand_1->reg = EBP;
@@ -3575,7 +3555,7 @@ namespace xlang {
 		insncls->delete_operand(&(in->operand_2));
 		instructions.push_back(in);
 	}
-	
+
 	void CodeGen::gen_function() {
 
 		//generate x86|x64 assembly function
@@ -3585,14 +3565,15 @@ namespace xlang {
 		memb_iterator memit;
 		int fpdisp = 0;
 		std::string comment = "; [ function: " + func_symtab->func_info->func_name;
-		
+
 		if (func_symtab->func_info->param_list.size() > 0) {
 			comment.push_back('(');
 			for (auto e: func_symtab->func_info->param_list) {
 				if (e->type_info->type == NodeType::SIMPLE) {
 					comment += e->type_info->type_specifier.simple_type[0].string + " ";
 					comment += e->symbol_info->symbol + ", ";
-				} else {
+				}
+				else {
 					comment += e->type_info->type_specifier.record_type.string + " ";
 					comment += e->symbol_info->symbol + ", ";
 				}
@@ -3602,27 +3583,28 @@ namespace xlang {
 				comment.pop_back();
 			}
 			comment.push_back(')');
-		} else {
+		}
+		else {
 			comment = comment + "()";
 		}
 		comment += " ]";
-		
+
 		insert_comment(comment);
-		
+
 		in = get_insn(INSLABEL, 0);
 		in->label = func_symtab->func_info->func_name;
 		insncls->delete_operand(&(in->operand_1));
 		insncls->delete_operand(&(in->operand_2));
 		instructions.push_back(in);
 		in = nullptr;
-		
+
 		get_func_local_members();
-		
+
 		save_frame_pointer();
-		
+
 		//allocate memory on stack for local variables
 		fmemit = func_members.find(func_symtab->func_info->func_name);
-		
+
 		if (fmemit != func_members.end()) {
 			if (fmemit->second.total_size > 0) {
 				in = insncls->get_insn_mem();
@@ -3630,28 +3612,29 @@ namespace xlang {
 				in->operand_count = 2;
 				in->operand_1->type = REGISTER;
 
-				if(Compiler::global.x64)
+				if (Compiler::global.x64)
 					in->operand_1->reg = RSP;
 				else
 					in->operand_1->reg = ESP;
-				
+
 				in->operand_2->type = LITERAL;
 				in->operand_2->literal = std::to_string(fmemit->second.total_size);
 				in->comment = "    ; allocate space for local variables";
 				instructions.push_back(in);
 			}
-			
+
 			//emit local variables location comments
 			memit = fmemit->second.members.begin();
 			while (memit != fmemit->second.members.end()) {
 				fpdisp = memit->second.fp_disp;
 				if (fpdisp < 0) {
-					if(Compiler::global.x64)
+					if (Compiler::global.x64)
 						insert_comment("    ; " + memit->first + " = [rbp - " + std::to_string(fpdisp * (-1)) + "]" + ", " + insncls->insnsize_name(get_insn_size_type(memit->second.insize)));
 					else
 						insert_comment("    ; " + memit->first + " = [ebp - " + std::to_string(fpdisp * (-1)) + "]" + ", " + insncls->insnsize_name(get_insn_size_type(memit->second.insize)));
-				} else {
-					if(Compiler::global.x64)
+				}
+				else {
+					if (Compiler::global.x64)
 						insert_comment("    ; " + memit->first + " = [rbp + " + std::to_string(fpdisp) + "]" + ", " + insncls->insnsize_name(get_insn_size_type(memit->second.insize)));
 					else
 						insert_comment("    ; " + memit->first + " = [ebp + " + std::to_string(fpdisp) + "]" + ", " + insncls->insnsize_name(get_insn_size_type(memit->second.insize)));
@@ -3660,20 +3643,20 @@ namespace xlang {
 			}
 		}
 	}
-	
+
 	void CodeGen::gen_uninitialized_data() {
 
 		// generate uninitialized data in bss section
 		// search symbol in global symbol table which are
 		// not in data section symbols and put them in bss section
-		
+
 		int i;
 		SymbolInfo *temp = nullptr;
 		std::list<Token>::iterator it;
-		
+
 		if (Compiler::symtab == nullptr)
 			return;
-		
+
 		for (i = 0; i < ST_SIZE; i++) {
 			temp = Compiler::symtab->symbol_info[i];
 			while (temp != nullptr && temp->type_info != nullptr) {
@@ -3717,7 +3700,8 @@ namespace xlang {
 								rv->res_size *= Convert::tok_to_decimal(*it);
 								it++;
 							}
-						} else {
+						}
+						else {
 							rv->res_size = Convert::tok_to_decimal(*(temp->arr_dimension_list.begin()));
 						}
 					}
@@ -3732,7 +3716,7 @@ namespace xlang {
 			}
 		}
 	}
-	
+
 	void CodeGen::gen_array_init_declaration(Node *symtab) {
 		int i;
 		SymbolInfo *syminf = nullptr;
@@ -3755,7 +3739,8 @@ namespace xlang {
 						for (auto e2: e1) {
 							if (e2.number == LIT_FLOAT) {
 								dt->array_data.push_back(e2.string);
-							} else {
+							}
+							else {
 								dt->array_data.push_back(std::to_string(Convert::tok_to_decimal(e2)));
 							}
 						}
@@ -3766,19 +3751,19 @@ namespace xlang {
 			}
 		}
 	}
-	
+
 	void CodeGen::gen_record() {
-		
+
 		// traverse through record table and generate its data section entry
 		// here using struc/endstruc macro provided by NASM assembler for record type
 		// also calculate size of each record and insert it into record_sizes table
-		
+
 		RecordNode *recnode = nullptr;
 		Node *recsymtab = nullptr;
 		SymbolInfo *syminf = nullptr;
 		TypeInfo *typeinf = nullptr;
 		int record_size = 0;
-		
+
 		if (Compiler::record_table == nullptr)
 			return;
 		for (int i = 0; i < ST_RECORD_SIZE; i++) {
@@ -3794,7 +3779,7 @@ namespace xlang {
 
 				if (recsymtab == nullptr)
 					break;
-				
+
 				//iterate through symbol table of record
 				for (int j = 0; j < ST_SIZE; j++) {
 					syminf = recsymtab->symbol_info[j];
@@ -3806,31 +3791,33 @@ namespace xlang {
 
 						if (syminf->is_array) {
 							int arrsize = 1;
-							for (auto x: syminf->arr_dimension_list) 
+							for (auto x: syminf->arr_dimension_list)
 								arrsize = arrsize * Convert::tok_to_decimal(x);
 							rectype.resv_size = arrsize;
 						}
-						else 
+						else
 							rectype.resv_size = 1;
-						
+
 						if (typeinf->type == NodeType::SIMPLE) {
 							if (syminf->is_ptr) {
 								rectype.resvsp_type = RESD;
 								record_size += 4;
-							} else {
+							}
+							else {
 								rectype.resvsp_type = resvspace_type_size(typeinf->type_specifier.simple_type[0]);
 
-								if (syminf->is_array) 
+								if (syminf->is_array)
 									record_size += rectype.resv_size * resv_decl_size(rectype.resvsp_type);
-								else 
+								else
 									record_size += resv_decl_size(rectype.resvsp_type);
 							}
-						} else if (typeinf->type == NodeType::RECORD) {
+						}
+						else if (typeinf->type == NodeType::RECORD) {
 							rectype.resvsp_type = RESD;
-							
-							if (syminf->is_array) 
+
+							if (syminf->is_array)
 								record_size += rectype.resv_size * (Compiler::global.x64 ? 8 : 4);
-							else 
+							else
 								record_size += (Compiler::global.x64 ? 8 : 4);
 						}
 
@@ -3846,7 +3833,7 @@ namespace xlang {
 			}
 		}
 	}
-	
+
 	void CodeGen::gen_global_declarations(TreeNode **trnode) {
 
 		// generate global declarations/assignment expressions
@@ -3858,9 +3845,9 @@ namespace xlang {
 		Expression *_expr = nullptr;
 		if (trhead == nullptr)
 			return;
-		
+
 		gen_array_init_declaration(Compiler::symtab);
-		
+
 		while (trhead != nullptr) {
 			if (trhead->symtab != nullptr) {
 				if (trhead->symtab->func_info != nullptr) {
@@ -3887,9 +3874,9 @@ namespace xlang {
 								if (initialized_data.find(_expr->assgn_expr->id_expr->id_info->symbol) != initialized_data.end()) {
 									Log::error_at(_expr->assgn_expr->tok.loc, "'" + _expr->assgn_expr->id_expr->id_info->symbol + "' assigned multiple times");
 									return;
-									
+
 								}
-								
+
 								initialized_data.insert(std::pair<std::string, SymbolInfo *>(_expr->assgn_expr->id_expr->id_info->symbol, _expr->assgn_expr->id_expr->id_info));
 								Member *dt = insncls->get_data_mem();
 								SymbolInfo *sminf = _expr->assgn_expr->id_expr->id_info;
@@ -3901,13 +3888,14 @@ namespace xlang {
 									dt->symbol = dt->symbol;
 									dt->value = get_hex_string(pexpr->tok.string);
 									dt->comment = "    ; '" + pexpr->tok.string + "'";
-								} else 
+								}
+								else
 									dt->value = pexpr->tok.string;
-								
+
 								data_section.push_back(dt);
 							}
 								break;
-							
+
 							default:
 								break;
 						}
@@ -3916,12 +3904,12 @@ namespace xlang {
 			}
 			trhead = trhead->p_next;
 		}
-		
+
 		gen_record();
 		//generate uninitialize data(bss)
 		gen_uninitialized_data();
 	}
-	
+
 	void CodeGen::write_text_to_asm_file(std::ofstream &outfile) {
 		if (!outfile.is_open())
 			return;
@@ -3935,11 +3923,11 @@ namespace xlang {
 		}
 		outfile << "\n";
 	}
-	
+
 	void CodeGen::write_record_member_to_asm_file(RecordDataType &x, std::ofstream &outfile) {
 		outfile << "      ." << x.symbol << " " << insncls->resspace_name(x.resvsp_type) << " " << std::to_string(x.resv_size) << "\n";
 	}
-	
+
 	void CodeGen::write_record_data_to_asm_file(ReserveSection **rv, std::ofstream &outfile) {
 		ReserveSection *r = *rv;
 		if (r == nullptr)
@@ -3977,7 +3965,7 @@ namespace xlang {
 
 		outfile << "    endstruc" << "\n";
 	}
-	
+
 	void CodeGen::write_data_to_asm_file(std::ofstream &outfile) {
 
 		if (!outfile.is_open())
@@ -3991,7 +3979,7 @@ namespace xlang {
 		for (Member *d: data_section) {
 			if (d->is_array) {
 				outfile << "    " << d->symbol << " " << insncls->declspace_name(d->type) << " ";
-				
+
 				size_t s = d->array_data.size();
 				if (s > 0) {
 					for (size_t i = 0; i < s - 1; i++) {
@@ -4000,13 +3988,14 @@ namespace xlang {
 					outfile << d->array_data[s - 1];
 				}
 				outfile << "\n";
-			} else {
+			}
+			else {
 				outfile << "    " << d->symbol << " " << insncls->declspace_name(d->type) << " " << d->value << d->comment << "\n";
 			}
 		}
 		outfile << "\n";
 	}
-	
+
 	void CodeGen::write_resv_to_asm_file(std::ofstream &outfile) {
 		if (!outfile.is_open())
 			return;
@@ -4022,12 +4011,12 @@ namespace xlang {
 		}
 		outfile << "\n";
 	}
-	
+
 	void CodeGen::write_instructions_to_asm_file(std::ofstream &outfile) {
 		std::string cast;
 		if (!outfile.is_open())
 			return;
-		
+
 		for (Instruction *in: instructions) {
 			if (in->insn_type == INSLABEL) {
 				outfile << in->label << ":\n";
@@ -4037,13 +4026,13 @@ namespace xlang {
 				outfile << in->inline_asm << "\n";
 				continue;
 			}
-			
+
 			if (in->insn_type != INSNONE) {
 				outfile << "    " << insncls->insn_name(in->insn_type) << " ";
 			}
-			
+
 			if (in->operand_count == 2) {
-				
+
 				switch (in->operand_1->type) {
 					case REGISTER :
 						outfile << reg->reg_name(in->operand_1->reg);
@@ -4064,7 +4053,8 @@ namespace xlang {
 								}
 								if (in->operand_1->mem.fp_disp > 0) {
 									outfile << " + " + std::to_string(in->operand_1->mem.fp_disp) << "]";
-								} else {
+								}
+								else {
 									outfile << "]";
 								}
 								break;
@@ -4073,7 +4063,8 @@ namespace xlang {
 								outfile << cast << "[ebp";
 								if (in->operand_1->mem.fp_disp > 0) {
 									outfile << " + " + std::to_string(in->operand_1->mem.fp_disp) << "]";
-								} else {
+								}
+								else {
 									outfile << " - " << std::to_string((in->operand_1->mem.fp_disp) * (-1)) << "]";
 								}
 								break;
@@ -4081,13 +4072,13 @@ namespace xlang {
 								break;
 						}
 						break;
-					
+
 					default:
 						break;
 				}
-				
+
 				outfile << ", ";
-				
+
 				switch (in->operand_2->type) {
 					case REGISTER :
 						outfile << reg->reg_name(in->operand_2->reg);
@@ -4102,7 +4093,8 @@ namespace xlang {
 							case GLOBAL :
 								if (in->operand_2->mem.mem_size < 0) {
 									outfile << in->operand_2->mem.name;
-								} else {
+								}
+								else {
 									cast = insncls->insnsize_name(get_insn_size_type(in->operand_2->mem.mem_size));
 									outfile << cast << "[" << in->operand_2->mem.name;
 									if (in->operand_2->is_array && in->operand_2->reg != RNONE) {
@@ -4110,7 +4102,8 @@ namespace xlang {
 									}
 									if (in->operand_2->mem.fp_disp > 0) {
 										outfile << " + " + std::to_string(in->operand_2->mem.fp_disp) << "]";
-									} else {
+									}
+									else {
 										outfile << "]";
 									}
 								}
@@ -4118,13 +4111,15 @@ namespace xlang {
 							case LOCAL :
 								if (in->operand_2->mem.mem_size <= 0) {
 									cast = "";
-								} else {
+								}
+								else {
 									cast = insncls->insnsize_name(get_insn_size_type(in->operand_2->mem.mem_size));
 								}
 								outfile << cast << "[ebp";
 								if (in->operand_2->mem.fp_disp > 0) {
 									outfile << " + " + std::to_string(in->operand_2->mem.fp_disp) << "]";
-								} else {
+								}
+								else {
 									outfile << " - " << std::to_string((in->operand_2->mem.fp_disp) * (-1)) << "]";
 								}
 								break;
@@ -4132,12 +4127,13 @@ namespace xlang {
 								break;
 						}
 						break;
-					
+
 					default:
 						break;
 				}
-				
-			} else if (in->operand_count == 1) {
+
+			}
+			else if (in->operand_count == 1) {
 				switch (in->operand_1->type) {
 					case REGISTER :
 						outfile << reg->reg_name(in->operand_1->reg);
@@ -4156,14 +4152,17 @@ namespace xlang {
 									outfile << cast << "[" << reg->reg_name(in->operand_1->reg);
 									if (in->operand_1->mem.fp_disp > 0) {
 										outfile << " + " + std::to_string(in->operand_1->mem.fp_disp) << "]";
-									} else {
+									}
+									else {
 										outfile << "]";
 									}
-								} else {
+								}
+								else {
 									outfile << cast << "[" << in->operand_1->mem.name;
 									if (in->operand_1->mem.fp_disp > 0) {
 										outfile << " + " + std::to_string(in->operand_1->mem.fp_disp) << "]";
-									} else {
+									}
+									else {
 										outfile << "]";
 									}
 								}
@@ -4173,7 +4172,8 @@ namespace xlang {
 								outfile << cast << "[ebp";
 								if (in->operand_1->mem.fp_disp > 0) {
 									outfile << " + " + std::to_string(in->operand_1->mem.fp_disp) << "]";
-								} else {
+								}
+								else {
 									outfile << " - " << std::to_string((in->operand_1->mem.fp_disp) * (-1)) << "]";
 								}
 								break;
@@ -4181,7 +4181,7 @@ namespace xlang {
 								break;
 						}
 						break;
-					
+
 					default:
 						break;
 				}
@@ -4190,18 +4190,18 @@ namespace xlang {
 			outfile << "\n";
 		}
 	}
-	
+
 	void CodeGen::write_asm_file() {
 		std::ofstream outfile(Compiler::global.file.asm_name(), std::ios::out);
-		
+
 		write_text_to_asm_file(outfile);
 		write_instructions_to_asm_file(outfile);
 		write_data_to_asm_file(outfile);
 		write_resv_to_asm_file(outfile);
-		
+
 		outfile.close();
 	}
-	
+
 	bool CodeGen::search_text(TextSection *tx) {
 		if (tx == nullptr)
 			return false;
@@ -4211,15 +4211,15 @@ namespace xlang {
 		}
 		return false;
 	}
-	
+
 	//generate final assembly code
-	
+
 	void CodeGen::get_code(TreeNode **ast) {
 
 		TreeNode *trhead = *ast;
 		if (trhead == nullptr)
 			return;
-		
+
 		if (Compiler::global.optimize) {
 			Optimizer *optmz = new Optimizer();
 			optmz->optimize(&trhead);
@@ -4228,17 +4228,17 @@ namespace xlang {
 			if (Compiler::global.error_count > 0)
 				return;
 		}
-		
+
 		gen_global_declarations(&trhead);
-		
+
 		trhead = *ast;
 		while (trhead != nullptr) {
-			
+
 			if (trhead->symtab != nullptr) {
 				func_symtab = trhead->symtab;
 				func_params = trhead->symtab->func_info;
 			}
-			
+
 			if (trhead->symtab == nullptr) {
 				if (trhead->statement != nullptr && trhead->statement->type == StatementType::ASM) {
 					gen_asm_statement(&trhead->statement->asm_statement);
@@ -4246,34 +4246,34 @@ namespace xlang {
 					continue;
 				}
 			}
-			
+
 			//global expression does not have sumbol table
 			//if symbol table is found, then function definition is also found
-			
+
 			if (func_symtab != nullptr) {
-				
+
 				//generate text section types for function(scope: global, extern)
 				TextSection *t = insncls->get_text_mem();
 				t->symbol = func_symtab->func_info->func_name;
-				
+
 				if (func_symtab->func_info->is_global)
 					t->type = TXTGLOBAL;
 				else if (func_symtab->func_info->is_extern)
 					t->type = TXTEXTERN;
 				else
 					t->type = TXTNONE;
-				
+
 				if (t->type != TXTNONE) {
 					if (search_text(t))
 						insncls->delete_text(&t);
 					else
 						text_section.push_back(t);
 				}
-				
+
 				if (!func_symtab->func_info->is_extern) {
 					get_func_local_members();
 					gen_function();
-					
+
 					if_label_count = 1;
 					else_label_count = 1;
 					exit_if_count = 1;
@@ -4281,16 +4281,16 @@ namespace xlang {
 					dowhile_loop_count = 1;
 					for_loop_count = 1;
 					exit_loop_label_count = 1;
-					
+
 					gen_statement(&trhead->statement);
 					restore_frame_pointer();
 					func_return();
 				}
 			}
-			
+
 			trhead = trhead->p_next;
 		}
-		
+
 		write_asm_file();
 	}
 }
