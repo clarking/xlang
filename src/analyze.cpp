@@ -80,7 +80,7 @@ namespace xlang {
 			std::string msg = "invalid Operand to binary " + opr->tok.string;
 			if (opr->tok.number == ARTHM_ADD || opr->tok.number == ARTHM_SUB) {
 				if (fact_2->tok.number == LIT_FLOAT || fact_2->tok.number == LIT_STRING) {
-					msg + " (have " + fact_2->tok.string + ")";
+					msg += " (have " + fact_2->tok.string + ")";
 					Log::error_at(opr->tok.loc, msg);
 					return false;
 				}
