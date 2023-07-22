@@ -13,11 +13,6 @@
 #include "gen.hpp"
 #include "compiler.hpp"
 
-extern int error_count;
-extern std::string asm_filename;
-extern bool optimize;
-extern bool omit_frame_pointer;
-
 namespace xlang {
 
 	int CodeGen::data_type_size(Token tok) {

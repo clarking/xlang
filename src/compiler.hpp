@@ -23,7 +23,7 @@ namespace xlang {
 	class Compiler {
 	public:
 		
-		~Compiler()=default;
+		~Compiler() = default;
 		
 		static GlobalConfig global;
 		
@@ -35,7 +35,6 @@ namespace xlang {
 		static Node *symtab;
 		static RecordSymtab *record_table;
 		static FunctionMap *func_table;
-		
         static RecordNode *last_rec_node;
 	    static SymbolInfo *last_symbol;
 
