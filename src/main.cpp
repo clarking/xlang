@@ -58,7 +58,7 @@ static void process_args(GlobalConfig &global, int argc, char **argv) {
 		else if (str == "--optimize" || str == "-o") 
 			global.optimize = true;
 		else if (str == "--link" || str == "-l") 
-			global.optimize = true;
+			global.link = true;
 		else if (str == "--no-stdlib") 
 			global.use_cstdlib = false;
 		else if (str == "--no-frameptr") 
